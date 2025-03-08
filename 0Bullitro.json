@@ -1,0 +1,10 @@
+{
+    "id": "0Bullitro",
+    "name": "Zero Bullitro",
+    "author": ["BitBites"],
+    "description": "A library mod containing many balatro functions that should have already existed and basic functionalities for lua",
+    "prefix": "bull",
+    "main_file": "0Bullitro.lua",
+    "version": "1.0",
+    "dependencies": []
+}
