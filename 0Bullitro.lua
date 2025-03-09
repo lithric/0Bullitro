@@ -60,13 +60,6 @@ _G.NaN = 0/0
 ---@type number
 _G.Infinity = 1/0
 
----@class GameContext
----@field blueprint_card Card
----@field pre_discard boolean
----@field before boolean
----@field cardarea CardArea
-_G.GameContext = {}
-
 ---Returns true if <code>object</code> cannot be operated with a number or if <code>object</code> is <code>NaN</code>.
 ---@param object any
 ---@return boolean
@@ -221,7 +214,7 @@ _G.bool = function(any)
 end
 
 --------------------------------------------------------------------------------------------------------------------------
--- Decoder of GIF-files
+-- Decoder of GIF-files (not made by me)
 --------------------------------------------------------------------------------------------------------------------------
 -- This module extracts images from GIF-files.
 -- Written in pure Lua.
@@ -1669,4 +1662,27 @@ function JokerObject:solve_name()
        solved_name = solved_name .. "{" .. attempt_number .. "}"
    end
    return solved_name
+end
+
+---@alias EventAreaType ("blind"|"round"|"shop"|"booster"|"blind_small"|"blind_big"|"blind_boss"|"booster_card"|"booster_planet"|"booster_tarot"|"booster_joker"|"booster_spectral")?
+
+---@alias EventObjectType ("card"|"planet"|"tarot"|"joker"|"spectral"|"voucher")?
+
+---@class ListenerConfig
+---@field listener_context ("on_trigger")?
+---@field object_context EventObjectType
+---@field area_context EventAreaType
+
+---@class EventContext
+---@field cardObject Card
+---@field areaObject CardArea
+---@field cardType EventObjectType
+---@field areaType EventAreaType
+
+---comment
+---@param eventName "on_update"|"on_blind_select_start"|"on_blind_skip_click"|"on_blind_reroll_click"|"on_blind_click"|"on_blind_select_end_click"|"on_round_start"|"on_discard_click"|"on_discard_card"|"on_discard_end"|"on_discard_draw_card"|"on_discard_draw_end"|"on_play_click"|"on_play_card"|"on_play_end"|"on_score_start"|"on_score_card"|"on_score_lucky"|"on_score_end"|"on_hold_card"|"on_jokers"|"on_jokers_end"|"on_play_discard_card"|"on_play_discard_glass"|"on_play_discard_end"|"on_play_draw_card"|"on_play_draw_end"|"on_round_end"|"on_shop_start"|"on_shop_reroll_click"|"on_purchase_click"|"on_create"|"on_add_to_deck"|"on_consumeable"|"on_booster_start"|"on_booster_skip_click"|"on_booster_end"|"on_sell"|"on_shop_end_click"|"on_lose"
+---@param listenerConfig ListenerConfig?
+---@param callback fun(context: EventContext)
+function Game:addEventListener(eventName,listenerConfig,callback)
+
 end
