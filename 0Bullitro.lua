@@ -1261,15 +1261,3 @@ function JokerObject:solve_name()
    return solved_name
 end
 JokerObject.addEventListener = Object.addEventListener
-
-local test_joker = JokerObject:new("Matoi Ryuuko","test joker")
-test_joker.rarity = "Legendary"
-test_joker.size = 1
-test_joker.cost = 10
-test_joker.discovered = true
-test_joker.unlocked = true
-test_joker.eternal_compat = true
-test_joker.blueprint_compat = true
-test_joker.perishable_compat = true
-test_joker:addEventListener("on_jokers",nil,function() return {mult = 4} end)
-test_joker:register()
