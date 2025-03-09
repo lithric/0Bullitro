@@ -1,10 +1,56 @@
 _G.FFI = require("ffi")
 
----@class Object
-_G.Object = Object
+---@alias RGBA [number,number,number,number]
 
----@class Game
+---@class G: Game
+---@field debug_tools UIBox
+---@field OVERLAY_MENU UIBox
+---@field BRUTE_OVERLAY RGBA
+_G.G = G
+
+---@class Back: Object
+---@operator call:Back
+_G.Back = Back
+
+---@class Game: Object
+---@operator call:Game
 _G.Game = Game
+
+---@class Tag: Object
+---@operator call:Tag
+_G.Tag = Tag
+
+---@class Particles: Moveable
+---@operator call:Particles
+_G.Particles = Particles
+
+---@class Sprite: Moveable
+---@operator call:Sprite
+_G.Sprite = Sprite
+
+---@class AnimatedSprite: Sprite
+---@operator call:AnimatedSprite
+_G.AnimatedSprite = AnimatedSprite
+
+---@class DynaText: Moveable
+---@operator call:DynaText
+_G.DynaText = DynaText
+
+---@class Blind: Moveable
+---@operator call:Blind
+_G.Blind = Blind
+
+---@class Card_Character: Moveable
+---@operator call:Card_Character
+_G.Card_Character = Card_Character
+
+---@class Card: Moveable
+---@operator call:Card
+_G.Card = Card
+
+---@class CardArea: Moveable
+---@operator call:CardArea
+_G.CardArea = CardArea
 
 ---NaN literal
 ---@type number
@@ -14,8 +60,12 @@ _G.NaN = 0/0
 ---@type number
 _G.Infinity = 1/0
 
----@class Card
-_G.Card = Card
+---@class GameContext
+---@field blueprint_card Card
+---@field pre_discard boolean
+---@field before boolean
+---@field cardarea CardArea
+_G.GameContext = {}
 
 ---Returns true if <code>object</code> cannot be operated with a number or if <code>object</code> is <code>NaN</code>.
 ---@param object any
@@ -35,7 +85,7 @@ _G.isWaN = function(object)
    return getmetatable(object) == Number and object.value == WaN.value or false
 end
 
----@type fun(e: any, base:any): number|nil
+---@type fun(e: any, base:any): number?
 local original_tonumber = tonumber
 tonumber = function(e,base)
    local rv = original_tonumber(e,base)
@@ -64,15 +114,12 @@ end
 
 ---@class Number
 ---@field value number|"-wan"
----@return Number|nil
 _G.Number = {}
 Number.__index = Number
-Number.__call = Number.new
-
 
 ---A wrapper class for all numbers to allow for special values (like WaN) to exist
----@param other number|Number|"-wan"|{value: number}|nil
----@return Number|nil
+---@param other any
+---@return Number?
 function Number:new(other)
    if not other then
       return nil
@@ -921,12 +968,15 @@ function table.implement(tbl,impl)
 end
 
 function table.get(tbl,...)
-    local got = tbl
+    local got = nil
     for i,v in ipairs({...}) do
-        got = got[v]
-        if got == nil then
+         if got == nil then
+            got = tbl
+         end
+         got = got[v]
+         if got == nil then
             return got
-        end
+         end
     end
     return got
 end
@@ -1282,4 +1332,341 @@ function get_X_same(amount_wanted, selected_cards, or_more)
 	if not straight then return ret end
 	table.insert(ret, t)
 	return ret
+end
+
+---@class JokerObject
+---@field name string|nil
+---@field rarity number
+---@field cost number
+---@field unlocked boolean
+---@field discovered boolean
+---@field blueprint_compat boolean
+---@field eternal_compat boolean
+---@field perishable_compat boolean
+---@field text string[]
+---@field calculate fun(self: JokerObject,card: Card,context: GameContext): GameEvent
+_G.JokerObject = {
+   registered = false,
+   size = "default",
+   smods = {
+       key = nil,
+       loc_txt = {
+           name = nil,
+           text = {}
+       },
+       atlas = nil,
+       pos = {x = 0, y = 0},
+       soul_pos = {x = 0, y = 1},
+       rarity = 1, -- Common
+       cost = 0,
+       unlocked = true,
+       discovered = true,
+       blueprint_compat = true,
+       eternal_compat = true,
+       perishable_compat = true,
+       config = {
+           extra = {
+               ---includes everything
+               chips = 0,
+               chip_mod = 0,
+               mult = 0,
+               mult_mod = 0,
+               x_mult = 1,
+               x_mult_mod = 1,
+               dollars = 0,
+               h_size = 0, -- extra hand size
+               d_size = 0, -- extra discards
+               free_rerolls = 0, -- extra free rerolls
+               debt_size = 0, -- extra debt size
+               plus_prob = 0, -- extra odds
+               mult_prob = 1, -- multiplied odds
+               interest_cap = 0, -- extra interest cap
+               interest_gain = 0, -- extra interest gain
+               h_plays = 0, -- extra hand plays
+               discards_since_create = 0,
+               hands_played_since_create = 0,
+               consecutive_without_face_cards = 0,
+               consecutive_without_most_played = 0,
+               nine_tally = 0,
+               steel_tally = 0,
+               stone_tally = 0,
+               abilities = {},
+               joker_list = ""
+           }
+       },
+       loc_vars = nil, -- function
+       calculate = nil, -- function
+       in_pool = nil, -- function
+       remove_from_deck = nil, -- function
+       add_to_deck = nil, -- function
+       calc_dollar_bonus = nil, --function
+   }
+}
+
+function JokerObject:__index(index)
+   if rawget(JokerObject,"__GET__"..index) then
+       return JokerObject["__GET__"..index](self)
+   elseif rawget(JokerObject,"__SET__"..index) then
+       return error("Cannot get property of an object with no getter!")
+   else
+       local val = copy(rawget(JokerObject,index))
+       rawset(self,index,val)
+       return rawget( self, index )
+   end
+end
+function JokerObject:__newindex(index,value)
+   if rawget(JokerObject,"__SET__"..index) then
+       JokerObject["__SET__"..index](self,value)
+   elseif rawget(JokerObject,"__GET__"..index) then
+       error("Cannot set property of an object with no setter!")
+   else
+       rawset(self,index,value)
+   end
+end
+function JokerObject:new(o)
+   local joker = o or {}
+   setmetatable(joker,self)
+   return joker
+end
+
+function JokerObject:__GET__name()
+   return self.smods.key
+end
+
+function JokerObject:__SET__name(name)
+   if self.registered then
+       error("Tried to change the foundational name a registered joker!")
+   end
+   self.smods.key = name
+   self.smods.loc_txt.name = name
+   self.smods.atlas = "Jokers-"..name
+end
+
+function JokerObject:__GET__rarity()
+   return self.smods.rarity
+end
+
+function JokerObject:__SET__rarity(rarity)
+   if self.registered then
+       error("Tried to change the foundational rarity of a registered joker!")
+   end
+   local proper_rarity = ({common = 1,uncommon = 2,rare = 3,legendary = 4})[string.lower(rarity)] or numer(rarity)
+   self.smods.rarity = proper_rarity
+end
+
+function JokerObject:__GET__cost()
+   return self.smods.cost
+end
+
+function JokerObject:__SET__cost(cost)
+   if self.registered then
+       error("Tried to change the foundational cost of a registered joker!")
+   end
+   self.smods.cost = numer(cost)
+end
+
+function JokerObject:__GET__unlocked()
+   return self.smods.unlocked
+end
+
+function JokerObject:__SET__unlocked(unlocked)
+   if self.registered then
+       error("Changing the foundational locked state of a registered joker is undefined behavior!")
+   end
+   self.smods.unlocked = unlocked
+end
+
+function JokerObject:__GET__discovered()
+   return self.smods.discovered
+end
+function JokerObject:__SET__discovered(discovered)
+   if self.registered then
+       error("Changing the foundational discovered property of a registered joker is undefined behavior!")
+   end
+   self.smods.discovered = discovered
+end
+function JokerObject:__GET__blueprint_compat()
+   return self.smods.blueprint_compat
+end
+function JokerObject:__SET__blueprint_compat(blueprint_compat)
+   if self.registered then
+       error("Changing the foundational blueprint compatibility of a registered joker is undefined behavior!")
+   end
+   self.smods.blueprint_compat = blueprint_compat
+end
+function JokerObject:__GET__eternal_compat()
+   return self.smods.eternal_compat
+end
+function JokerObject:__SET__eternal_compat(eternal_compat)
+   if self.registered then
+       error("Changing the foundational eternal compatibility of a registered joker is undefined behavior!")
+   end
+   self.smods.eternal_compat = eternal_compat
+end
+function JokerObject:__GET__perishable_compat()
+   return self.smods.perishable_compat
+end
+function JokerObject:__SET__perishable_compat(perishable_compat)
+   if self.registered then
+       error("Changing the foundational perishable compatibility of a registered joker is undefined behavior!")
+   end
+   self.smods.perishable_compat = perishable_compat
+end
+
+function JokerObject:__GET__text()
+   return self.smods.loc_txt.text
+end
+
+function JokerObject:__SET__text(value)
+   if self.registered then
+       error("Changing the foundational text of a registered joker is undefined behavior!")
+   end
+   if type(value) == "table" then
+       self.smods.loc_txt.text = value
+   elseif type(value) == "string" then
+       local lines = {}
+       for match in string.gmatch(value,"[^\n]+") do
+           table.insert(lines,match)
+       end
+       self.smods.loc_txt.text = lines
+   else
+       error("Tried to set text of joker to an invalid data type!")
+   end
+end
+
+function JokerObject:__SET__calculate(func)
+   if self.registered then
+       error("Changing the foundational calculation method of a registered joker is undefined behavior!")
+   end
+   self.smods.calculate = func
+end
+
+function JokerObject:__SET__loc_vars(func)
+   if self.registered then
+       error("Changing the foundational local variable method of a registered joker is undefined behavior!")
+   end
+   self.smods.loc_vars = func
+end
+
+function JokerObject:__SET__in_pool(func)
+   if self.registered then
+       error("Changing the foundational in pool method of a registered joker is undefined behavior!")
+   end
+   self.smods.in_pool = func
+end
+
+function JokerObject:__SET__remove_from_deck(func)
+   if self.registered then
+       error("Changing the foundational in pool method of a registered joker is undefined behavior!")
+   end
+   self.smods.remove_from_deck = func
+end
+
+function JokerObject:__SET__add_to_deck(func)
+   if self.registered then
+       error("Changing the foundational in pool method of a registered joker is undefined behavior!")
+   end
+   self.smods.remove_from_deck = func
+end
+
+function JokerObject:__SET__calc_dollar_bonus(func)
+   if self.registered then
+       error("Changing the foundational in pool method of a registered joker is undefined behavior!")
+   end
+   self.smods.calc_dollar_bonus = func
+end
+
+function JokerObject:set_attributes(attributes_table)
+   if self.registered then
+       error("Changing the foundational attributes of a registered joker is undefined behavior!")
+   end
+   for name, value in pairs(attributes_table) do
+       self.smods.config.extra[name] = value
+   end
+end
+
+function JokerObject:get_attribute(name)
+   return self.smods.config.extra[name]
+end
+
+function JokerObject:register()
+   if self.registered then
+       return error("Tried to double register a joker!")
+   end
+   local name = self.name
+   if name == nil or name ~= self:solve_name() then
+       return error("Tried to register a joker with an unsolved name!")
+   end
+   SMODS.Atlas({
+       key = "modicon",
+       path = "modicon.png",
+       px = 32,
+       py = 32
+   })
+   local atlas_entry = {}
+   atlas_entry.key = "Jokers-"..name
+   atlas_entry.path = "Jokers-"..name..".png"
+
+   if self.size == "default" then
+       atlas_entry.px = 71
+       atlas_entry.py = 95
+   else
+       return error("Tried to register a joker with an improper size!")
+   end
+   SMODS.Atlas(atlas_entry)
+   if self.smods.loc_vars == nil then
+       local extra_list = {}
+       for k, v in pairs(self.smods.config.extra) do
+           table.insert(extra_list,k)
+       end
+       self.smods.loc_vars = function(this, info_queue, center)
+           local extra_vars = {}
+           for i, ability in ipairs(extra_list) do
+               table.insert(extra_vars,center.ability.extra[ability])
+           end
+           return {vars = extra_vars}
+       end
+   end
+   if self.smods.in_pool == nil then
+       self.smods.in_pool = function(this,var1,var2)
+           return true
+       end
+   end
+   if self.smods.calculate == nil then
+       self.smods.calculate = function(this,card,context)
+           if context.joker_main then
+               return {
+                   mult = card.ability.extra.mult,
+                   x_mult = card.ability.extra.x_mult,
+                   chips = card.ability.extra.chips
+               }
+           end
+       end
+   end
+   SMODS.Joker(self.smods)
+   self.registered = true
+end
+
+function JokerObject:solve_name()
+   local max_attempts = 255
+   local solved_name = self.name
+   if (solved_name==nil or type(solved_name) ~= "string" or solved_name == "") then
+       return nil
+   end
+   if (SMODS.Atlases[solved_name]) then
+       local after_attempt = string.match(solved_name,"{(%d+)}$")
+       local attempt_number = 1
+       if after_attempt ~= nil then
+           solved_name = string.sub(solved_name,1,-1-string.len(after_attempt)-2)
+           attempt_number = numer(after_attempt) + 1
+       end
+       while (SMODS.Atlases[solved_name .. "{" .. attempt_number .. "}"]) do
+           if attempt_number == max_attempts then
+               return nil
+           end
+           attempt_number = attempt_number + 1
+       end
+       solved_name = solved_name .. "{" .. attempt_number .. "}"
+   end
+   return solved_name
 end

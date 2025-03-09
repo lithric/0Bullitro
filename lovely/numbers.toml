@@ -221,3 +221,228 @@ position = "at"
 payload = "ϖ"
 match_indent = true
 times = 1
+
+
+
+# other
+# moveable
+[[patches]]
+[patches.pattern]
+target = "engine/moveable.lua"
+pattern = "---@class Moveable: Node"
+position = "at"
+payload = '''
+
+---@class RoleObject
+---@field offset Position2D
+---@field role_type ('Major'|'Minor'|'Glued')?
+---@field bond ('Strong'|'Weak')?
+---@field xy_bond ('Strong'|'Weak')?
+---@field wh_bond ('Strong'|'Weak')?
+---@field r_bond ('Strong'|'Weak')?
+---@field scale_bond ('Strong'|'Weak')?
+---@field type ('tl'|'tm'|'tr'|'cl'|'cm'|'cr'|'bl'|'bm'|'br'|'tli'|'tmi'|'tri'|'cli'|'cmi'|'cri'|'bli'|'bmi'|'bri'|string)?
+---@field draw_major Moveable?
+---@field major Moveable?
+
+---@class Moveable: Node
+---@field role RoleObject
+---@field zoom number?
+---@operator call:Moveable'''
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/moveable.lua"
+pattern = "---@param args {T: table, container: Node}"
+position = "at"
+payload = '''
+
+---@function
+---@param X ({T:[number,number,number,number]}|number)?
+---@param Y number?
+---@param W number?
+---@param H number?'''
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/moveable.lua"
+pattern = "---@param args {major: Moveable, bond: string, offset: table, type: string}"
+position = "at"
+payload = "---@param args (RoleObject|Moveable)?"
+match_indent = true
+times = 1
+
+#UI
+[[patches]]
+[patches.pattern]
+target = "engine/ui.lua"
+pattern = "--Class"
+position = "at"
+payload = '''
+
+---@class UIBox: Moveable
+---@operator call:UIBox'''
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/ui.lua"
+pattern = "---@param args {T: table, definition: table, config: table}"
+position = "at"
+payload = "---@param args UIBox|Moveable"
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/ui.lua"
+pattern = "--Class"
+position = "at"
+payload = '''
+
+---@alias UITransform {Root:any,T:any,O:any,B:any,C:any,R:any}
+---@class UIElement: Moveable
+---@field parent UIElement
+---@operator call:UIElement'''
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/ui.lua"
+pattern = "--Class Methods"
+position = "at"
+payload = '''
+
+---@function
+---@param parent (UIElement|UIBox)
+---@param new_UIBox UIBox
+---@param new_UIT UITransform
+---@param config table'''
+match_indent = true
+times = 1
+
+#node
+[[patches]]
+[patches.pattern]
+target = "engine/node.lua"
+pattern = "---@class Node"
+position = "at"
+payload = '''
+
+---@alias Transform2D {x:number|0,y:number|0,w:number|1,h:number|1,r:number|0,scale:number|1}
+---@alias ChildNodes {d_popup: UIBox,h_popup: UIBox, alert: UIBox,rest...:Node}
+
+---@class Node: Object
+---@field T Transform2D
+---@field CT Transform2D
+---@field VT Transform2D?
+---@field DEBUG_VALUE string?
+---@field CALCING boolean?
+---@field children ChildNodes
+---@operator call:Node'''
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/node.lua"
+pattern = "---@param args {T: table, container: Node}"
+position = "at"
+payload = '''---@param args {T: [number?,number?,number?,number?,number?,number?]|{x:number?,y:number?,w:number?,h:number?,r:number?,scale:number?}, container: Node}'''
+match_indent = true
+times = 1
+
+#controller
+[[patches]]
+[patches.pattern]
+target = "engine/controller.lua"
+pattern = "---@class Controller"
+position = "at"
+payload = '''
+
+---@alias Position2D {x:number,y:number}
+
+---@class ControlHandle
+---@field handled boolean
+---@field target (Card|Node|UIElement)?
+---@field time number?
+---@field prev_target (Card|Node|UIElement)?
+---@field T Position2D?
+
+---@class Controller: Object
+---@field clicked ControlHandle
+---@field focused ControlHandle
+---@field dragging ControlHandle
+---@field hovering ControlHandle
+---@field released_on ControlHandle
+---@field cursor_down ControlHandle
+---@field cursor_up ControlHandle
+---@field cursor_hover ControlHandle
+---@operator call:Controller'''
+match_indent = true
+times = 1
+
+#object
+[[patches]]
+[patches.pattern]
+target = "engine/object.lua"
+pattern = "Object = {}"
+position = "at"
+payload = '''
+
+---@class Object
+---@operator call:Object
+Object = {}'''
+match_indent = true
+times = 1
+
+#event
+[[patches]]
+[patches.pattern]
+target = "engine/event.lua"
+pattern = "--Class"
+position = "at"
+payload = '''
+
+---@class Event:Object
+---@operator call:Event'''
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/event.lua"
+pattern = "--Class Methods"
+position = "at"
+payload = '''
+
+---@class EventConfig
+---@field blockable boolean?
+---@field blocking boolean?
+---@field trigger ('immediate'|'ease'|'condition'|'after'|'before')?
+---@field start_timer boolean?
+---@field no_delete boolean?
+---@field delay number?
+---@field timer ('BACKGROUND'|'REAL'|'REAL_SHADER'|'TOTAL'|'UPTIME')?
+---@field ease ('lerp'|'elastic'|'quad')?
+---@field ease_to number?
+---@field func (fun(progress: number): boolean)?
+---@field ref_table table?
+---@field ref_value string?
+---@field stop_val any?
+---@field pause_force boolean?
+
+---@function
+---@param config EventConfig'''
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/event.lua"
+pattern = "--Class"
+position = "at"
+payload = '''
+
+---@class EventManager:Object
+---@operator call:EventManager'''
+match_indent = true
+times = 1
