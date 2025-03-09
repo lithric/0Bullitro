@@ -52,167 +52,6 @@ _G.Card = Card
 ---@operator call:CardArea
 _G.CardArea = CardArea
 
----NaN literal
----@type number
-_G.NaN = 0/0
-
----Infinity literal
----@type number
-_G.Infinity = 1/0
-
----Returns true if <code>object</code> cannot be operated with a number or if <code>object</code> is <code>NaN</code>.
----@param object any
----@return boolean
-_G.isNaN = function(object)
-   if getmetatable(object) == Number then
-      return object.value ~= object.value
-   else
-      return object ~= object
-   end
-end
-
----Returns true if <code>object</code> cannot be operated with a number or if <code>object</code> is <code>WaN</code>.
----@param object any
----@return boolean
-_G.isWaN = function(object)
-   return getmetatable(object) == Number and object.value == WaN.value or false
-end
-
----@type fun(e: any, base:any): number?
-local original_tonumber = tonumber
-tonumber = function(e,base)
-   local rv = original_tonumber(e,base)
-   if rv == nil and getmetatable(e) == Number then
-      if isWaN(e) then
-         return WaN
-      else
-         return e.value
-      end
-   elseif rv ~= nil then
-      return rv
-   else
-      return nil
-   end
-end
-
-local original_type = type
-type = function(obj)
-   local rv = original_type(obj)
-   if rv == "table" and getmetatable(obj) == Number then
-      return "number"
-   else
-      return rv
-   end
-end
-
----@class Number
----@field value number|"-wan"
-_G.Number = {}
-Number.__index = Number
-
----A wrapper class for all numbers to allow for special values (like WaN) to exist
----@param other any
----@return Number?
-function Number:new(other)
-   if not other then
-      return nil
-   elseif isWaN(other) then
-      return WaN
-   elseif getmetatable(other) == Number then
-      local instance = Number:new(other.value)
-      return instance
-   elseif other == "-wan" then
-      local instance = setmetatable({},Number)
-      instance.value = "-wan"
-      return instance
-   else
-      if type(other) ~= "number" then return nil end
-      local instance = setmetatable({},Number)
-      instance.value = other
-      return instance
-   end
-end
-
-function Number:__unm()
-   if isWaN(self) then return WaN end
-   return Number:new(-tonumber(self))
-end
-
-function Number:__mod(other)
-   if isWaN(self) then return WaN end
-   if isWaN(other) then return WaN end
-   return Number:new(tonumber(self) % tonumber(other))
-end
-
-function Number:__pow(other)
-   if isWaN(self) then return WaN end
-   if isWaN(other) then return WaN end
-   return Number:new(tonumber(self) ^ tonumber(other))
-end
-
-function Number:__add(other)
-   if isWaN(self) then return WaN end
-   if isWaN(other) then return WaN end
-   return Number:new(tonumber(self) + tonumber(other))
-end
-
-function Number:__sub(other)
-   if isWaN(self) then return WaN end
-   if isWaN(other) then return WaN end
-   return Number:new(tonumber(self) - tonumber(other))
-end
-
-function Number:__mul(other)
-   if isWaN(self) then return WaN end
-   if isWaN(other) then return WaN end
-   return Number:new(tonumber(self) * tonumber(other))
-end
-
-function Number:__div(other)
-   if isWaN(self) then return WaN end
-   if isWaN(other) then return WaN end
-   return Number:new(tonumber(self) / tonumber(other))
-end
-
-function Number:__tostring()
-   if isWaN(self) then return WaN.value end
-   return tostring(tonumber(self))
-end
-
-function Number.__concat(a,b)
-   return tostring(a) .. tostring(b)
-end
-
-function Number:__eq(other)
-   if isWaN(self) then return not isNaN(other) end
-   if isWaN(other) then return not isNaN(self) end
-   return tonumber(self) == tonumber(other)
-end
-
-function Number:__lt(other)
-   if isWaN(self) then return not isNaN(other) end
-   if isWaN(other) then return not isNaN(self) end
-   return tonumber(self) < tonumber(other)
-end
-
-function Number:__le(other)
-   if isWaN(self) then return not isNaN(other) end
-   if isWaN(other) then return not isNaN(self) end
-   return tonumber(self) <= tonumber(other)
-end
-
----Wild number literal
----@type Number
-_G.WaN = Number:new("-wan") or error("Mistakes have been made...")
-
----Evaluates falsy objects according to javascript rules.
----@param any any
----@return boolean
-_G.bool = function(any)
-    if not any or (any == Number:new(0) and not isWaN(any)) or (type(any)=="number" and isNaN(any)) or any == "" then return false end
-    return true
-end
-
 --------------------------------------------------------------------------------------------------------------------------
 -- Decoder of GIF-files (not made by me)
 --------------------------------------------------------------------------------------------------------------------------
@@ -780,270 +619,6 @@ end
 
 --------------------------------------------------------------------------------------------------------------------------
 
----Removes the leading and trailing whitespace characters from a string.
----@param self string
----@return string
-function string.trim(self)
-    return self:match("^%s*(.-)%s*$")
-end
-
----Converts <code>object</code> into a number using javascript rules (nil is undefined).<br>
----Returns <code>NaN</code> if <code>object</code> could not be converted into a number.
----@param object any
----@return number|Number|nil
-_G.numer = function(object)
-    if type(object) == "number" then return object end
-    if type(object) == "boolean" then return object and 1 or 0 end
-    if type(object) == "string" then
-        if object == "Infinity" then return Infinity end
-        if object == "-Infinity" then return -Infinity end
-        if object == "" then return 0 end
-    end
-    return tonumber(object) or NaN
-end
-
----comment
----@param v any
----@param ... any
----@return Card
-_G.safetypecard = function(v,...)
-    assert(getmetatable(v)==Card,...)
-    return v
-end
-
----comment
----@param str any
----@param ... any
----@return string
-_G.safestr = function(str,...)
-    assert(type(str) == "string",...)
-    return str
-end
-
-
----comment
----@param tbl any
----@param ... any
----@return table
-_G.safetable = function(tbl,...)
-    assert(type(tbl) == "table",...)
-    return tbl
-end
-
----comment
----@param bl any
----@param ... any
----@return boolean
-_G.safebool = function(bl,...)
-    assert(type(bl) == "boolean",...)
-    return bl
-end
-
-
-_G.dump = function(o)
-    if type(o) == 'table' then
-        local s = '{ '
-        for k,v in pairs(o) do
-            if type(k) ~= 'number' then k = '"'..k..'"' end
-            s = s .. '['..k..'] = ' .. dump(v) .. ','
-        end
-        return s .. '} '
-    else
-        return tostring(o)
-    end
-end
-
-_G.copy = function(obj, seen)
-    if type(obj) ~= 'table' then return obj end
-    if seen and seen[obj] then return seen[obj] end
-    local s = seen or {}
-    local res = setmetatable({}, getmetatable(obj))
-    s[obj] = res
-    for k, v in pairs(obj) do res[copy(k, s)] = copy(v, s) end
-    return res
-end
-
-_G.solvepredicate = function(pred)
-    if pred == nil then
-        pred = function() return true end
-    end
-    if type(pred) == "boolean" then
-        if pred then
-            pred = function(v)
-                return bool(v)
-            end
-        else
-            pred = function(v)
-                return not bool(v)
-            end
-        end
-    end
-    if type(pred) == "table" then
-        local comparisonType = pred.match or "and"
-        if comparisonType == "and" then
-            local predicates = pred
-            pred = function(...)
-                for i,cond in ipairs(predicates) do
-                    if not bool(solvepredicate(cond)(...)) then
-                        return false
-                    end
-                end
-                return true
-            end
-        elseif comparisonType == "or" then
-            local predicates = pred
-            pred = function(...)
-                for i,cond in ipairs(predicates) do
-                    if bool(solvepredicate(cond)(...)) then
-                        return true
-                    end
-                end
-                return false
-            end
-        end
-    end
-    if type(pred) ~= "function" then
-        local val = pred
-        pred = function(v)
-            return v == val
-        end
-    end
-    return pred
-end
-
----Returns true if some value inside the list matched the predicate.
----@param tbl table
----@param pred any
----@return boolean
-function table.some(tbl,pred)
-    pred = solvepredicate(pred)
-    for i,v in ipairs(tbl) do
-        if pred(v,i,tbl) then
-            return true
-        end
-    end
-    return false
-end
-
----Returns true if every value inside the list matched the predicate.
----@param tbl any
----@param pred any
----@return boolean
-function table.every(tbl,pred)
-   pred = solvepredicate(pred)
-   for i,v in ipairs(tbl) do
-       if not pred(v,i,tbl) then
-           return false
-       end
-   end
-   return true
-end
-
-function table.implement(tbl,impl)
-    for k,v in pairs(impl) do
-        if k == "@override" then goto continue end
-        if tbl[k] == nil then
-            tbl[k] = v
-        elseif type(v) == "table" and type(tbl[k]) == "table" then
-            table.implement(tbl[k],v)
-        end
-        ::continue::
-    end
-    for k,v in pairs(impl["@override"] or {}) do
-        if type(tbl[k]) == "table" and type(v) == "table" then
-            table.implement(tbl[k],{["@override"] = v})
-        elseif type(tbl[k]) == "function" and type(v) == "function" then
-            tbl[k] = v(tbl[k])
-        else
-            tbl[k] = v
-        end
-    end
-end
-
-function table.get(tbl,...)
-    local got = nil
-    for i,v in ipairs({...}) do
-         if got == nil then
-            got = tbl
-         end
-         got = got[v]
-         if got == nil then
-            return got
-         end
-    end
-    return got
-end
-
----Returns the amount of entries in the list that matched the filter.
----@param tbl table
----@param pred any
----@return integer
-function table.count(tbl,pred)
-    pred = solvepredicate(pred)
-    local count = 0
-    for i,v in ipairs(tbl) do
-        if pred(v,i,tbl) then
-            count = count + 1
-        end
-    end
-    return count
-end
-
----Returns a new list with all the entries of the list that passed the filter.
----@generic H: table
----@param tbl `H`
----@param pred any
----@return H
-function table.filter(tbl,pred)
-    local rv = {}
-    pred = solvepredicate(pred)
-    for i,v in ipairs(tbl) do
-        if pred(v,i,tbl) then
-            table.insert(rv,v)
-        end
-    end
-    return rv
-end
-
----Returns the sum of all the values inside the list.
----@param tbl table
----@param pred any
----@return number
-function table.sum(tbl,pred)
-    local sum = 0
-    pred = solvepredicate(pred)
-    for i,v in ipairs(tbl) do
-        if pred(v,i,tbl) then
-            sum = sum + numer(v)
-        end
-    end
-    return sum
-end
-
----Returns a new list with each value mapped with the mapping function.
----@generic H: table
----@param tbl `H`
----@generic T
----@param func fun(value: any,index: integer,table: H): `T`
----@param pred any
----@return T[]
-function table.map(tbl,func,pred)
-    local rv = {}
-    pred = solvepredicate(pred)
-    for i,v in ipairs(tbl) do
-        if pred(v,i,tbl) then
-            rv[i] = func(v,i,tbl)
-        end
-    end
-    return rv
-end
-
-_G.wrapnumber = function(num,first_bound,second_bound)
-    local range_length = math.abs(first_bound-second_bound)+1
-    local bottom_val = math.min(first_bound,second_bound)
-    return ((num-bottom_val)%range_length)+bottom_val
-end
-
 table.implement(SMODS.Atlas,{
     ["@override"] = {
         inject = function(old_inject)
@@ -1327,74 +902,90 @@ function get_X_same(amount_wanted, selected_cards, or_more)
 	return ret
 end
 
----@class JokerObject
+---@class JokerObject: Object
+---@field size "default"|number|{px:number,py:number}
 ---@field name string|nil
----@field rarity number
+---@field rarity number|string
 ---@field cost number
 ---@field unlocked boolean
 ---@field discovered boolean
 ---@field blueprint_compat boolean
 ---@field eternal_compat boolean
 ---@field perishable_compat boolean
----@field text string[]
+---@field text string[]|string
 ---@field calculate fun(self: JokerObject,card: Card,context: GameContext): GameEvent
-_G.JokerObject = {
-   registered = false,
-   size = "default",
-   smods = {
-       key = nil,
-       loc_txt = {
-           name = nil,
-           text = {}
-       },
-       atlas = nil,
-       pos = {x = 0, y = 0},
-       soul_pos = {x = 0, y = 1},
-       rarity = 1, -- Common
-       cost = 0,
-       unlocked = true,
-       discovered = true,
-       blueprint_compat = true,
-       eternal_compat = true,
-       perishable_compat = true,
-       config = {
-           extra = {
-               ---includes everything
-               chips = 0,
-               chip_mod = 0,
-               mult = 0,
-               mult_mod = 0,
-               x_mult = 1,
-               x_mult_mod = 1,
-               dollars = 0,
-               h_size = 0, -- extra hand size
-               d_size = 0, -- extra discards
-               free_rerolls = 0, -- extra free rerolls
-               debt_size = 0, -- extra debt size
-               plus_prob = 0, -- extra odds
-               mult_prob = 1, -- multiplied odds
-               interest_cap = 0, -- extra interest cap
-               interest_gain = 0, -- extra interest gain
-               h_plays = 0, -- extra hand plays
-               discards_since_create = 0,
-               hands_played_since_create = 0,
-               consecutive_without_face_cards = 0,
-               consecutive_without_most_played = 0,
-               nine_tally = 0,
-               steel_tally = 0,
-               stone_tally = 0,
-               abilities = {},
-               joker_list = ""
-           }
-       },
-       loc_vars = nil, -- function
-       calculate = nil, -- function
-       in_pool = nil, -- function
-       remove_from_deck = nil, -- function
-       add_to_deck = nil, -- function
-       calc_dollar_bonus = nil, --function
+---@operator call:JokerObject
+_G.JokerObject = Object:extend()
+
+function JokerObject:init(name,text)
+   self.registered = false
+   self.size = "default"
+   self.smods = {
+      key = nil,
+      loc_txt = {
+         name = nil,
+         text = {}
+      },
+      atlas = nil,
+      pos = {x = 0, y = 0},
+      soul_pos = {x = 0, y = 1},
+      rarity = 1, -- Common
+      cost = 0,
+      unlocked = true,
+      discovered = true,
+      blueprint_compat = true,
+      eternal_compat = true,
+      perishable_compat = true,
+      config = {
+         extra = {
+            ---includes everything
+            chips = 0,
+            chip_mod = 0,
+            mult = 0,
+            mult_mod = 0,
+            x_mult = 1,
+            x_mult_mod = 1,
+            dollars = 0,
+            h_size = 0, -- extra hand size
+            d_size = 0, -- extra discards
+            free_rerolls = 0, -- extra free rerolls
+            debt_size = 0, -- extra debt size
+            plus_prob = 0, -- extra odds
+            mult_prob = 1, -- multiplied odds
+            interest_cap = 0, -- extra interest cap
+            interest_gain = 0, -- extra interest gain
+            h_plays = 0, -- extra hand plays
+            discards_since_create = 0,
+            hands_played_since_create = 0,
+            consecutive_without_face_cards = 0,
+            consecutive_without_most_played = 0,
+            nine_tally = 0,
+            steel_tally = 0,
+            stone_tally = 0,
+            abilities = {},
+            joker_list = ""
+         }
+      },
+      loc_vars = nil, -- function
+      calculate = nil, -- function
+      in_pool = nil, -- function
+      remove_from_deck = nil, -- function
+      add_to_deck = nil, -- function
+      calc_dollar_bonus = nil, --function
+      pixel_size = {w = 71, h = 95},
+      display_size = {w = 71, h = 95},
    }
-}
+   self.name = name
+   self.text = text
+end
+
+---comment
+---@param name string
+---@param text string[]|string
+---@return JokerObject
+function JokerObject:new(name,text)
+   return JokerObject(name,text)
+end
 
 function JokerObject:__index(index)
    if rawget(JokerObject,"__GET__"..index) then
@@ -1407,6 +998,7 @@ function JokerObject:__index(index)
        return rawget( self, index )
    end
 end
+
 function JokerObject:__newindex(index,value)
    if rawget(JokerObject,"__SET__"..index) then
        JokerObject["__SET__"..index](self,value)
@@ -1415,11 +1007,6 @@ function JokerObject:__newindex(index,value)
    else
        rawset(self,index,value)
    end
-end
-function JokerObject:new(o)
-   local joker = o or {}
-   setmetatable(joker,self)
-   return joker
 end
 
 function JokerObject:__GET__name()
@@ -1527,6 +1114,10 @@ function JokerObject:__SET__text(value)
    end
 end
 
+function JokerObject:__GET__calculate()
+   return self.smods.calculate
+end
+
 function JokerObject:__SET__calculate(func)
    if self.registered then
        error("Changing the foundational calculation method of a registered joker is undefined behavior!")
@@ -1603,6 +1194,12 @@ function JokerObject:register()
    if self.size == "default" then
        atlas_entry.px = 71
        atlas_entry.py = 95
+   elseif type(self.size) == "number" then
+      atlas_entry.px = 69 * self.size+2
+      atlas_entry.py = 93 * self.size+2
+   elseif type(self.size) == "table" then
+      atlas_entry.px = self.size.px
+      atlas_entry.py = self.size.py
    else
        return error("Tried to register a joker with an improper size!")
    end
@@ -1663,26 +1260,16 @@ function JokerObject:solve_name()
    end
    return solved_name
 end
+JokerObject.addEventListener = Object.addEventListener
 
----@alias EventAreaType ("blind"|"round"|"shop"|"booster"|"blind_small"|"blind_big"|"blind_boss"|"booster_card"|"booster_planet"|"booster_tarot"|"booster_joker"|"booster_spectral")?
-
----@alias EventObjectType ("card"|"planet"|"tarot"|"joker"|"spectral"|"voucher")?
-
----@class ListenerConfig
----@field listener_context ("on_trigger")?
----@field object_context EventObjectType
----@field area_context EventAreaType
-
----@class EventContext
----@field cardObject Card
----@field areaObject CardArea
----@field cardType EventObjectType
----@field areaType EventAreaType
-
----comment
----@param eventName "on_update"|"on_blind_select_start"|"on_blind_skip_click"|"on_blind_reroll_click"|"on_blind_click"|"on_blind_select_end_click"|"on_round_start"|"on_discard_click"|"on_discard_card"|"on_discard_end"|"on_discard_draw_card"|"on_discard_draw_end"|"on_play_click"|"on_play_card"|"on_play_end"|"on_score_start"|"on_score_card"|"on_score_lucky"|"on_score_end"|"on_hold_card"|"on_jokers"|"on_jokers_end"|"on_play_discard_card"|"on_play_discard_glass"|"on_play_discard_end"|"on_play_draw_card"|"on_play_draw_end"|"on_round_end"|"on_shop_start"|"on_shop_reroll_click"|"on_purchase_click"|"on_create"|"on_add_to_deck"|"on_consumeable"|"on_booster_start"|"on_booster_skip_click"|"on_booster_end"|"on_sell"|"on_shop_end_click"|"on_lose"
----@param listenerConfig ListenerConfig?
----@param callback fun(context: EventContext)
-function Game:addEventListener(eventName,listenerConfig,callback)
-
-end
+local test_joker = JokerObject:new("Matoi Ryuuko","test joker")
+test_joker.rarity = "Legendary"
+test_joker.size = 1
+test_joker.cost = 10
+test_joker.discovered = true
+test_joker.unlocked = true
+test_joker.eternal_compat = true
+test_joker.blueprint_compat = true
+test_joker.perishable_compat = true
+test_joker:addEventListener("on_jokers",nil,function() return {mult = 4} end)
+test_joker:register()
