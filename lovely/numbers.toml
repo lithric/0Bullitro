@@ -760,6 +760,7 @@ payload = '''
 ---@field areaObject CardArea?
 ---@field cardType EventObjectType?
 ---@field areaType EventAreaType?
+---@field context any
 
 ---comment
 ---@param eventName "on_update"|"on_blind_select_start"|"on_blind_skip_click"|"on_blind_reroll_click"|"on_blind_click"|"on_blind_select_end_click"|"on_round_start"|"on_discard_click"|"on_discard_card"|"on_discard_end"|"on_discard_draw_card"|"on_discard_draw_end"|"on_play_click"|"on_play_card"|"on_play_end"|"on_score_start"|"on_score_card"|"on_score_lucky"|"on_score_end"|"on_hold_card"|"on_jokers"|"on_jokers_end"|"on_play_discard_card"|"on_play_discard_shatter"|"on_play_discard_end"|"on_play_draw_card"|"on_play_draw_end"|"on_round_end"|"on_round_bonus"|"on_shop_start"|"on_shop_reroll_click"|"on_purchase_click"|"on_create"|"on_add_to_deck"|"on_remove_from_deck"|"on_destroy"|"on_slice"|"on_consumeable"|"on_booster_start"|"on_booster_skip_click"|"on_booster_end"|"on_sell"|"on_shop_end_click"|"on_lose"
@@ -849,6 +850,29 @@ function Object:addEventListener(eventName,listenerConfig,callback)
           end
         }
       })
+    elseif eventName == "on_score_card" and listenerConfig.area_context == "round" and listenerConfig.object_context == "card" then
+        table.implement(self,{
+            ["@override"] = {
+                calculate = function(old_calc)
+                    return function(_self,card,context)
+                        local first = nil
+                        local second = nil
+                        first = old_calc(_self,card,context)
+                        if context.other_card and context.cardarea == G.play and context.individual then
+                            second = callback({
+                                self = _self,
+                                cardObject = card,
+                                cardType = listenerConfig.object_context,
+                                areaObject = G.play,
+                                areaType = "round",
+                                context = context
+                            })
+                        end
+                        return combine_return(first,second)
+                    end
+                end
+            }
+        })
     end
 end
 
