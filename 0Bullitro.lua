@@ -926,6 +926,8 @@ end
 ---@field interest_gain number?
 ---@field interest_amount number?
 ---@field h_plays number?
+---@field new fun()?
+---@field __call fun()?
 ---@operator call:EventQuery
 _G.EventQuery = {}
 
