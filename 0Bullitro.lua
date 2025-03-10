@@ -47,6 +47,9 @@ _G.Card_Character = Card_Character
 ---@class Card: Moveable
 ---@operator call:Card
 _G.Card = Card
+if not Card.ability then
+   Card.ability = {}
+end
 
 ---@type GameObjectData
 Card.ability.extra = Card.ability.extra
