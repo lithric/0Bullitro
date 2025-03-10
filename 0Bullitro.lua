@@ -1492,12 +1492,12 @@ green_guy:register()
 local bob = JokerObject:new("bob",[[
 this is a bob #6#
 ]])
-green_guy:addEventListener("on_play_click",nil,function(eventObject)
+bob:addEventListener("on_play_click",nil,function(eventObject)
    local card = eventObject.self.object
    card.ability.extra.mult = card.ability.extra.mult + 1
 end)
-green_guy:addEventListener("on_discard_click",nil,function(eventObject)
+bob:addEventListener("on_discard_click",nil,function(eventObject)
    local card = eventObject.self.object
    card.ability.extra.mult = math.max(card.ability.extra.mult - 1,0)
 end)
-green_guy:register()
+bob:register()
