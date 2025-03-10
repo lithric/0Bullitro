@@ -1325,7 +1325,7 @@ function JokerObject:register()
       local card = contextObject.cardObject
       return card.ability.extra.dollars + math.max(math.min(
             (G.GAME.dollars/5)*card.ability.extra.interest_gain*G.GAME.interest_amount,
-            G.GAME.interest_cap
+            (G.GAME.interest_cap/5)*G.GAME.interest_amount
             ),
             0
       )
