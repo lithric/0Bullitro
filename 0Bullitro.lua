@@ -902,6 +902,100 @@ function get_X_same(amount_wanted, selected_cards, or_more)
 	return ret
 end
 
+---@class JokerAbilities: Object
+---@field chips number?
+---@field chip_mod number?
+---@field x_chips number?
+---@field Xchip_mod number?
+---@field mult number?
+---@field mult_mod number?
+---@field x_mult number?
+---@field Xmult_mod number?
+---@field dollars number?
+---@field h_size number?
+---@field d_size number?
+---@field free_rerolls number?
+---@field debt_size number?
+---@field odds_bonus number?
+---@field odds_mult number?
+---@field interest_cap number?
+---@field interest_gain number?
+---@field interest_amount number?
+---@field h_plays number?
+---@field discards_since_create number?
+---@field hands_played_since_create number?
+---@field consecutive_without_face_cards number?
+---@field consecutive_without_most_played number?
+---@field nine_tally number?
+---@field steel_tally number?
+---@field stone_tally number?
+---@field abilities table?
+---@field joker_list string?
+---@field init any
+---@field new any
+---@field is any
+---@field __index any
+---@field __call any
+---@field extend any
+---@field addEventListener any
+---@operator call:JokerAbilities
+_G.JokerAbilities = Object:extend()
+
+function JokerAbilities:init()
+      -- chips given (loud)
+      self.chips = 0
+      -- chips given (silent)
+      self.chip_mod = 0
+      -- chips multiplier (loud)
+      self.x_chips = 1
+      -- chips multiplier (silent) (*note* I had no choice in this)
+      self.Xchip_mod = 1
+      -- mult given (loud)
+      self.mult = 0
+      -- mult given (silent)
+      self.mult_mod = 0
+      -- mult multiplier (loud)
+      self.x_mult = 1
+      -- mult multiplier (silent) (*note* I had no choice in this)
+      self.Xmult_mod = 1
+      -- round bonus given
+      self.dollars = 0
+      -- extra hand size
+      self.h_size = 0
+      -- extra discards (not my choice of name btw)
+      self.d_size = 0
+      -- extra free rerolls
+      self.free_rerolls = 0
+      -- extra debt size
+      self.debt_size = 0
+      -- extra odds
+      self.odds_bonus = 0
+      -- odds multiplier
+      self.odds_mult = 1
+      -- extra interest cap
+      self.interest_cap = 0
+      -- extra interest gain
+      self.interest_gain = 0
+      -- extra interest per interest
+      self.interest_amount = 0
+      -- extra hand plays
+      self.h_plays = 0
+
+      self.discards_since_create = 0
+      self.hands_played_since_create = 0
+      self.consecutive_without_face_cards = 0
+      self.consecutive_without_most_played = 0
+      self.nine_tally = 0
+      self.steel_tally = 0
+      self.stone_tally = 0
+      self.abilities = {}
+      self.joker_list = ""
+end
+
+function JokerAbilities:new()
+   return JokerAbilities()
+end
+
 ---@class JokerObject: Object
 ---@field size "default"|number|{px:number,py:number}
 ---@field name string|nil
@@ -937,35 +1031,7 @@ function JokerObject:init(name,text)
       eternal_compat = true,
       perishable_compat = true,
       config = {
-         extra = {
-            ---includes everything
-            chips = 0,
-            chip_mod = 0,
-            mult = 0,
-            mult_mod = 0,
-            x_mult = 1,
-            x_mult_mod = 1,
-            dollars = 0,
-            h_size = 0, -- extra hand size
-            d_size = 0, -- extra discards
-            free_rerolls = 0, -- extra free rerolls
-            debt_size = 0, -- extra debt size
-            plus_prob = 0, -- extra odds
-            mult_prob = 1, -- multiplied odds
-            interest_cap = 0, -- extra interest cap
-            interest_gain = 0, -- extra interest gain
-            interest_amount = 0, -- extra interest per interest
-            h_plays = 0, -- extra hand plays
-            discards_since_create = 0,
-            hands_played_since_create = 0,
-            consecutive_without_face_cards = 0,
-            consecutive_without_most_played = 0,
-            nine_tally = 0,
-            steel_tally = 0,
-            stone_tally = 0,
-            abilities = {},
-            joker_list = ""
-         }
+         extra = JokerAbilities:new()
       },
       loc_vars = nil, -- function
       calculate = nil, -- function
@@ -1173,6 +1239,8 @@ function JokerObject:__SET__calc_dollar_bonus(func)
    self.smods.calc_dollar_bonus = func
 end
 
+---comment
+---@param attributes_table JokerAbilities
 function JokerObject:set_attributes(attributes_table)
    if self.registered then
        error("Changing the foundational attributes of a registered joker is undefined behavior!")
