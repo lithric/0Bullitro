@@ -48,6 +48,9 @@ _G.Card_Character = Card_Character
 ---@operator call:Card
 _G.Card = Card
 
+---@type GameObjectData
+Card.ability.extra = Card.ability.extra
+
 ---@class CardArea: Moveable
 ---@operator call:CardArea
 _G.CardArea = CardArea
@@ -902,7 +905,7 @@ function get_X_same(amount_wanted, selected_cards, or_more)
 	return ret
 end
 
----@class JokerAbilities: Object
+---@class EventQuery: Object
 ---@field chips number?
 ---@field chip_mod number?
 ---@field x_chips number?
@@ -922,78 +925,78 @@ end
 ---@field interest_gain number?
 ---@field interest_amount number?
 ---@field h_plays number?
----@field discards_since_create number?
----@field hands_played_since_create number?
----@field consecutive_without_face_cards number?
----@field consecutive_without_most_played number?
----@field nine_tally number?
----@field steel_tally number?
----@field stone_tally number?
----@field abilities table?
----@field joker_list string?
----@field init any
----@field new any
----@field is any
----@field __index any
----@field __call any
----@field extend any
----@field addEventListener any
----@operator call:JokerAbilities
-_G.JokerAbilities = Object:extend()
+---@field is fun()?
+---@field new fun()?
+---@field addEventListener fun()?
+---@field __call fun()?
+---@field __index fun()?
+---@field init fun()?
+---@field extend fun()?
+---@operator call:EventQuery
+_G.EventQuery = Object:extend()
 
-function JokerAbilities:init()
-      -- chips given (loud)
-      self.chips = 0
-      -- chips given (silent)
-      self.chip_mod = 0
-      -- chips multiplier (loud)
-      self.x_chips = 1
-      -- chips multiplier (silent) (*note* I had no choice in this)
-      self.Xchip_mod = 1
-      -- mult given (loud)
-      self.mult = 0
-      -- mult given (silent)
-      self.mult_mod = 0
-      -- mult multiplier (loud)
-      self.x_mult = 1
-      -- mult multiplier (silent) (*note* I had no choice in this)
-      self.Xmult_mod = 1
-      -- round bonus given
-      self.dollars = 0
-      -- extra hand size
-      self.h_size = 0
-      -- extra discards (not my choice of name btw)
-      self.d_size = 0
-      -- extra free rerolls
-      self.free_rerolls = 0
-      -- extra debt size
-      self.debt_size = 0
-      -- extra odds
-      self.odds_bonus = 0
-      -- odds multiplier
-      self.odds_mult = 1
-      -- extra interest cap
-      self.interest_cap = 0
-      -- extra interest gain
-      self.interest_gain = 0
-      -- extra interest per interest
-      self.interest_amount = 0
-      -- extra hand plays
-      self.h_plays = 0
-
-      self.discards_since_create = 0
-      self.hands_played_since_create = 0
-      self.consecutive_without_face_cards = 0
-      self.consecutive_without_most_played = 0
-      self.nine_tally = 0
-      self.steel_tally = 0
-      self.stone_tally = 0
-      self.abilities = {}
-      self.joker_list = ""
+function EventQuery:init()
+   -- chips given (loud)
+   self.chips = 0
+   -- chips given (silent)
+   self.chip_mod = 0
+   -- chips multiplier (loud)
+   self.x_chips = 1
+   -- chips multiplier (silent) (*note* I had no choice in this)
+   self.Xchip_mod = 1
+   -- mult given (loud)
+   self.mult = 0
+   -- mult given (silent)
+   self.mult_mod = 0
+   -- mult multiplier (loud)
+   self.x_mult = 1
+   -- mult multiplier (silent) (*note* I had no choice in this)
+   self.Xmult_mod = 1
+   -- round bonus given
+   self.dollars = 0
+   -- extra hand size
+   self.h_size = 0
+   -- extra discards (not my choice of name btw)
+   self.d_size = 0
+   -- extra free rerolls
+   self.free_rerolls = 0
+   -- extra debt size
+   self.debt_size = 0
+   -- extra odds
+   self.odds_bonus = 0
+   -- odds multiplier
+   self.odds_mult = 1
+   -- extra interest cap
+   self.interest_cap = 0
+   -- extra interest gain
+   self.interest_gain = 0
+   -- extra interest per interest
+   self.interest_amount = 0
+   -- extra hand plays
+   self.h_plays = 0
 end
 
-function JokerAbilities:new()
-   return JokerAbilities()
+function EventQuery:new()
+   return EventQuery()
+end
+
+---@class GameObjectData: EventQuery
+_G.GameObjectData = EventQuery:extend()
+
+function GameObjectData:init()
+   self.discards_since_create = 0
+   self.hands_played_since_create = 0
+   self.consecutive_without_face_cards = 0
+   self.consecutive_without_most_played = 0
+   self.nine_tally = 0
+   self.steel_tally = 0
+   self.stone_tally = 0
+   self.abilities = {}
+   self.joker_list = ""
+end
+
+function GameObjectData:new()
+   return GameObjectData()
 end
 
 ---@class JokerObject: Object
@@ -1007,7 +1010,7 @@ end
 ---@field eternal_compat boolean
 ---@field perishable_compat boolean
 ---@field text string[]|string
----@field calculate fun(self: JokerObject,card: Card,context: GameContext): GameEvent
+---@field calculate fun(self: JokerObject,card: Card,context: GameContext): EventQuery
 ---@operator call:JokerObject
 _G.JokerObject = Object:extend()
 
@@ -1031,7 +1034,7 @@ function JokerObject:init(name,text)
       eternal_compat = true,
       perishable_compat = true,
       config = {
-         extra = JokerAbilities:new()
+         extra = GameObjectData:new()
       },
       loc_vars = nil, -- function
       calculate = nil, -- function
@@ -1240,7 +1243,7 @@ function JokerObject:__SET__calc_dollar_bonus(func)
 end
 
 ---comment
----@param attributes_table JokerAbilities
+---@param attributes_table EventQuery
 function JokerObject:set_attributes(attributes_table)
    if self.registered then
        error("Changing the foundational attributes of a registered joker is undefined behavior!")
@@ -1311,9 +1314,11 @@ function JokerObject:register()
          mult = card.ability.extra.mult,
          mult_mod = card.ability.extra.mult_mod,
          x_mult = card.ability.extra.x_mult,
-         x_mult_mod = card.ability.extra.x_mult_mod,
+         Xmult_mod = card.ability.extra.Xmult_mod,
          chips = card.ability.extra.chips,
          chip_mod = card.ability.extra.chip_mod,
+         x_chips = card.ability.extra.x_chips,
+         Xchip_mod = card.ability.extra.Xchip_mod
       }
    end)
    self:addEventListener("on_round_bonus",{area_context = "round_bonus",object_context = "self"},function(contextObject)
@@ -1335,6 +1340,9 @@ function JokerObject:register()
       calculate_reroll_cost(true)
       G.GAME.interest_cap = G.GAME.interest_cap + card.ability.extra.interest_cap
       G.GAME.interest_amount = G.GAME.interest_amount + card.ability.extra.interest_amount
+      for k,v in pairs(G.GAME.probabilities) do
+         G.GAME.probabilities[k] = (v+card.ability.extra.odds_bonus)*card.ability.extra.odds_mult
+      end
    end)
    self:addEventListener("on_remove_from_deck",{area_context = "any",object_context = "self"},function(contextObject)
       local card = contextObject.cardObject
@@ -1346,6 +1354,9 @@ function JokerObject:register()
       calculate_reroll_cost(true)
       G.GAME.interest_cap = G.GAME.interest_cap - card.ability.extra.interest_cap
       G.GAME.interest_amount = G.GAME.interest_amount - card.ability.extra.interest_amount
+      for k,v in pairs(G.GAME.probabilities) do
+         G.GAME.probabilities[k] = (v/card.ability.extra.odds_mult)-card.ability.extra.odds_bonus
+      end
    end)
    SMODS.Joker(self.smods)
    self.registered = true
