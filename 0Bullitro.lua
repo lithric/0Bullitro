@@ -47,12 +47,10 @@ _G.Card_Character = Card_Character
 ---@class Card: Moveable
 ---@operator call:Card
 _G.Card = Card
-if not Card.ability then
-   Card.ability = {}
-end
 
----@type GameObjectData
-Card.ability.extra = Card.ability.extra
+
+---@type {extra: GameObjectData}
+Card.ability = Card.ability
 
 ---@class CardArea: Moveable
 ---@operator call:CardArea
@@ -908,7 +906,7 @@ function get_X_same(amount_wanted, selected_cards, or_more)
 	return ret
 end
 
----@class EventQuery: Object
+---@class EventQuery
 ---@field chips number?
 ---@field chip_mod number?
 ---@field x_chips number?
@@ -928,78 +926,77 @@ end
 ---@field interest_gain number?
 ---@field interest_amount number?
 ---@field h_plays number?
----@field is fun()?
----@field new fun()?
----@field addEventListener fun()?
----@field __call fun()?
----@field __index fun()?
----@field init fun()?
----@field extend fun()?
 ---@operator call:EventQuery
-_G.EventQuery = Object:extend()
-
-function EventQuery:init()
-   -- chips given (loud)
-   self.chips = 0
-   -- chips given (silent)
-   self.chip_mod = 0
-   -- chips multiplier (loud)
-   self.x_chips = 1
-   -- chips multiplier (silent) (*note* I had no choice in this)
-   self.Xchip_mod = 1
-   -- mult given (loud)
-   self.mult = 0
-   -- mult given (silent)
-   self.mult_mod = 0
-   -- mult multiplier (loud)
-   self.x_mult = 1
-   -- mult multiplier (silent) (*note* I had no choice in this)
-   self.Xmult_mod = 1
-   -- round bonus given
-   self.dollars = 0
-   -- extra hand size
-   self.h_size = 0
-   -- extra discards (not my choice of name btw)
-   self.d_size = 0
-   -- extra free rerolls
-   self.free_rerolls = 0
-   -- extra debt size
-   self.debt_size = 0
-   -- extra odds
-   self.odds_bonus = 0
-   -- odds multiplier
-   self.odds_mult = 1
-   -- extra interest cap
-   self.interest_cap = 0
-   -- extra interest gain
-   self.interest_gain = 0
-   -- extra interest per interest
-   self.interest_amount = 0
-   -- extra hand plays
-   self.h_plays = 0
-end
+_G.EventQuery = {}
 
 function EventQuery:new()
-   return EventQuery()
+   local obj = setmetatable({},EventQuery)
+   -- chips given (loud)
+   obj.chips = 0
+   -- chips given (silent)
+   obj.chip_mod = 0
+   -- chips multiplier (loud)
+   obj.x_chips = 1
+   -- chips multiplier (silent) (*note* I had no choice in this)
+   obj.Xchip_mod = 1
+   -- mult given (loud)
+   obj.mult = 0
+   -- mult given (silent)
+   obj.mult_mod = 0
+   -- mult multiplier (loud)
+   obj.x_mult = 1
+   -- mult multiplier (silent) (*note* I had no choice in this)
+   obj.Xmult_mod = 1
+   -- round bonus given
+   obj.dollars = 0
+   -- extra hand size
+   obj.h_size = 0
+   -- extra discards (not my choice of name btw)
+   obj.d_size = 0
+   -- extra free rerolls
+   obj.free_rerolls = 0
+   -- extra debt size
+   obj.debt_size = 0
+   -- extra odds
+   obj.odds_bonus = 0
+   -- odds multiplier
+   obj.odds_mult = 1
+   -- extra interest cap
+   obj.interest_cap = 0
+   -- extra interest gain
+   obj.interest_gain = 0
+   -- extra interest per interest
+   obj.interest_amount = 0
+   -- extra hand plays
+   obj.h_plays = 0
+   return obj
+end
+
+function EventQuery:__call()
+   return EventQuery:new()
 end
 
 ---@class GameObjectData: EventQuery
-_G.GameObjectData = EventQuery:extend()
-
-function GameObjectData:init()
-   self.discards_since_create = 0
-   self.hands_played_since_create = 0
-   self.consecutive_without_face_cards = 0
-   self.consecutive_without_most_played = 0
-   self.nine_tally = 0
-   self.steel_tally = 0
-   self.stone_tally = 0
-   self.abilities = {}
-   self.joker_list = ""
-end
+---@operator call: GameObjectData
+_G.GameObjectData = {}
 
 function GameObjectData:new()
-   return GameObjectData()
+   local obj = EventQuery:new()
+   setmetatable(obj,GameObjectData)
+   obj.discards_since_create = 0
+   obj.hands_played_since_create = 0
+   obj.consecutive_without_face_cards = 0
+   obj.consecutive_without_most_played = 0
+   obj.nine_tally = 0
+   obj.steel_tally = 0
+   obj.stone_tally = 0
+   obj.abilities = {}
+   obj.joker_list = ""
+   return obj
+end
+
+function GameObjectData:__call()
+   return GameObjectData:new()
 end
 
 ---@class JokerObject: Object
