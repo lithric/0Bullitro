@@ -745,32 +745,70 @@ pattern = "function Object:extend()"
 position = "at"
 payload = '''
 
----@alias EventAreaType ("blind"|"round"|"round_bonus"|"shop"|"booster"|"blind_small"|"blind_big"|"blind_boss"|"booster_card"|"booster_planet"|"booster_tarot"|"booster_joker"|"booster_spectral"|"any")
+---@alias CardAreaType ("discard"|"deck"|"hand"|"joker"|"play"|"title_2"|"title"|"voucher"|"consumeable"|"shop"|"SELF"|"any"|"none")
 
----@alias EventObjectType ("card"|"planet"|"tarot"|"joker"|"spectral"|"voucher"|"self")
+---@alias EventAreaContext ("in_blind_select"|"in_round"|"in_round_bonus"|"in_booster_pack"|"in_card_booster_pack"|"in_planet_booster_pack"|"in_tarot_booster_pack"|"in_joker_booster_pack"|"in_spectral_booster_pack")
+
+---@alias EventAreaStage ("in_starting_blind"|"in_small_blind"|"in_big_blind"|"in_boss_blind")
+
+---@alias CardObjectType ("Default"|"Enhanced"|"Joker"|"Edition"|"Tarot"|"Planet"|"Voucher"|"Spectral"|"Booster"|"None"|"SELF"|"any")
+
+---@alias EventName ("on_update"|"on_blind_select_start"|"on_blind_skip_click"|"on_blind_reroll_click"|"on_blind_click"|"on_blind_select_end_click"|"on_round_start"|"on_discard_click"|"on_discard_card"|"on_discard_end"|"on_discard_draw_card"|"on_discard_draw_end"|"on_play_click"|"on_play_card"|"on_play_end"|"on_score_start"|"on_score_card"|"on_score_lucky"|"on_score_end"|"on_hold_card"|"on_jokers"|"on_jokers_end"|"on_play_discard_card"|"on_play_discard_shatter"|"on_play_discard_end"|"on_play_draw_card"|"on_play_draw_end"|"on_round_end"|"on_round_bonus"|"on_shop_start"|"on_shop_reroll_click"|"on_purchase_click"|"on_create"|"on_add_to_deck"|"on_remove_from_deck"|"on_destroy"|"on_slice"|"on_consumeable"|"on_booster_start"|"on_booster_skip_click"|"on_booster_end"|"on_sell"|"on_shop_end_click"|"on_lose"|"none")
+
+_G.dynamic_get = function(obj,...)
+    local args = {...}
+    return function()
+        return table.get(obj,unpack(args))
+    end
+end
 
 ---@class ListenerConfig
----@field listener_context ("on_trigger")?
----@field object_context EventObjectType?
----@field area_context EventAreaType?
+---@field listener_type ("on_trigger")?
+---@field self_type CardObjectType?
+---@field self_area CardAreaType?
+---@field other_type CardObjectType?
+---@field other_area CardAreaType?
 
----@class EventContext
----@field self Card
----@field cardObject Card
----@field areaObject CardArea?
----@field cardType EventObjectType?
----@field areaType EventAreaType?
----@field context any
+---@class EventObject
+---@field object Card
+---@field get_type fun(): CardObjectType?
+---@field get_area fun(): CardArea?
+---@field get_area_type fun(): CardAreaType?
+_G.EventObject = {}
 
 ---comment
----@param eventName "on_update"|"on_blind_select_start"|"on_blind_skip_click"|"on_blind_reroll_click"|"on_blind_click"|"on_blind_select_end_click"|"on_round_start"|"on_discard_click"|"on_discard_card"|"on_discard_end"|"on_discard_draw_card"|"on_discard_draw_end"|"on_play_click"|"on_play_card"|"on_play_end"|"on_score_start"|"on_score_card"|"on_score_lucky"|"on_score_end"|"on_hold_card"|"on_jokers"|"on_jokers_end"|"on_play_discard_card"|"on_play_discard_shatter"|"on_play_discard_end"|"on_play_draw_card"|"on_play_draw_end"|"on_round_end"|"on_round_bonus"|"on_shop_start"|"on_shop_reroll_click"|"on_purchase_click"|"on_create"|"on_add_to_deck"|"on_remove_from_deck"|"on_destroy"|"on_slice"|"on_consumeable"|"on_booster_start"|"on_booster_skip_click"|"on_booster_end"|"on_sell"|"on_shop_end_click"|"on_lose"
----@param listenerConfig ListenerConfig?
+---@param card Card
+---@return EventObject
+function EventObject:new(card)
+    local obj = setmetatable({},EventObject)
+    obj.object = card
+    obj.get_type = dynamic_get(card,"config","center","set")
+    obj.get_area = dynamic_get(card,"area")
+    obj.get_area_type = dynamic_get(card,"area","config","type")
+    return obj
+end
+
+---@class EventContext
+---@field SELF Object
+---@field CONTEXT any
+---@field self EventObject
+---@field other EventObject
+
+---comment
+---@param eventName EventName
+---@param config ListenerConfig?
 ---@param callback fun(context: EventContext): any
-function Object:addEventListener(eventName,listenerConfig,callback)
-   listenerConfig = listenerConfig or {}
-   if not listenerConfig.object_context then listenerConfig.object_context = "self" end
-   if not listenerConfig.area_context then listenerConfig.area_context = "any" end
-   if eventName == "on_jokers" and listenerConfig.area_context == "round" and listenerConfig.object_context == "self" then
+function Object:addEventListener(eventName,config,callback)
+   config = config or {}
+   if not config.self_type then config.self_type = "any" end
+   if not config.self_area then config.self_area = "any" end
+   if not config.other_type then config.other_type = "SELF" end
+   if not config.other_area then config.other_area = "SELF" end
+   if eventName == "on_jokers" and
+   (config.self_type == "SELF" or config.self_type == "any" or config.self_type == "Joker") and
+   (config.self_area == "SELF" or config.self_area == "any" or config.self_area == "joker") and
+   (config.other_type == "SELF") and
+   (config.other_area == "SELF") then
       table.implement(self,{
           ["@override"] = {
             calculate = function(old_calculate)
@@ -778,14 +816,14 @@ function Object:addEventListener(eventName,listenerConfig,callback)
                   local first = nil
                   local second = nil
                   first = old_calculate(_self,card,context)
+                  local this_card = EventObject:new(card)
+                  local other_card = EventObject:new(card)
                   if context.cardarea == G.jokers and context.joker_main then
                       second = callback({
-                        self = _self,
-                        cardObject = card,
-                        context = context,
-                        cardType = listenerConfig.object_context,
-                        areaObject = G.jokers,
-                        areaType = listenerConfig.area_context,
+                        SELF = _self,
+                        CONTEXT = context,
+                        self = this_card,
+                        other = other_card
                       })
                   end
                   return combine_return(first,second)
@@ -793,7 +831,11 @@ function Object:addEventListener(eventName,listenerConfig,callback)
             end
           }
       })
-  elseif eventName == "on_round_bonus" and listenerConfig.object_context == "self" and listenerConfig.area_context == "round_bonus" then
+  elseif eventName == "on_round_bonus" and
+  (config.self_type == "SELF" or config.self_type == "any" or config.self_type == "Joker") and
+  (config.self_area == "SELF" or config.self_area == "any" or config.self_area == "joker") and
+  (config.other_type == "SELF") and
+  (config.other_area == "SELF") then
       table.implement(self,{
         ["@override"] = {
           calc_dollar_bonus = function(old_calc)
@@ -801,56 +843,68 @@ function Object:addEventListener(eventName,listenerConfig,callback)
               local first = 0
               local second = 0
               first = old_calc(_self,card,context) or 0
+              local this_card = EventObject:new(card)
+              local other_card = EventObject:new(card)
               second = callback({
-                self = _self,
-                cardObject = card,
-                context = context,
-                cardType = listenerConfig.object_context,
-                areaObject = G.jokers,
-                areaType = "round_bonus"
+                SELF = _self,
+                CONTEXT = context,
+                self = this_card,
+                other = other_card
               }) or 0
               return first + second
             end
           end
         }
       })
-    elseif eventName == "on_add_to_deck" and listenerConfig.object_context == "self" and listenerConfig.area_context == "any" then
+    elseif eventName == "on_add_to_deck" and
+    (config.self_type == "SELF" or config.self_type == "any" or config.self_type == "Joker") and
+    (config.self_area == "SELF" or config.self_area == "any") and
+    (config.other_type == "SELF") and
+    (config.other_area == "SELF") then
       table.implement(self,{
         ["@override"] = {
           add_to_deck = function(old_calc)
             return function(_self,card,context)
               old_calc(_self,card,context)
+              local this_card = EventObject:new(card)
+              local other_card = EventObject:new(card)
               callback({
-                self = _self,
-                cardObject = card,
-                context = context,
-                cardType = listenerConfig.object_context,
-                areaObject = nil,
-                areaType = listenerConfig.area_context
+                SELF = _self,
+                CONTEXT = context,
+                self = this_card,
+                other = other_card
               })
             end
           end
         }
       })
-    elseif eventName == "on_remove_from_deck" and listenerConfig.object_context == "self" and listenerConfig.area_context == "any" then
+    elseif eventName == "on_remove_from_deck" and
+    (config.self_type == "SELF" or config.self_type == "any" or config.self_type == "Joker") and
+    (config.self_area == "SELF" or config.self_area == "any") and
+    (config.other_type == "SELF") and
+    (config.other_area == "SELF") then
       table.implement(self,{
         ["@override"] = {
           remove_from_deck = function(old_calc)
             return function(_self,card,context)
               old_calc(_self,card,context)
+              local this_card = EventObject:new(card)
+              local other_card = EventObject:new(card)
               callback({
-                self = _self,
-                cardObject = card,
-                context = context,
-                cardType = listenerConfig.object_context,
-                areaObject = nil,
-                areaType = listenerConfig.area_context
+                SELF = _self,
+                CONTEXT = context,
+                self = this_card,
+                other = other_card
               })
             end
           end
         }
       })
-    elseif eventName == "on_score_card" and listenerConfig.area_context == "round" and listenerConfig.object_context == "card" then
+    elseif eventName == "on_score_card" and 
+    (config.self_type == "Joker" or config.self_type == "SELF" or config.self_type == "any") and
+    (config.self_area == "SELF" or config.self_area == "any") and
+    (config.other_type == "Default" or config.other_type == "Enhanced" or config.other_type == "any") and
+    (config.other_area == "play" or config.other_area == "any") then
         table.implement(self,{
             ["@override"] = {
                 calculate = function(old_calc)
@@ -858,14 +912,149 @@ function Object:addEventListener(eventName,listenerConfig,callback)
                         local first = nil
                         local second = nil
                         first = old_calc(_self,card,context)
-                        if context.other_card and context.cardarea == G.play and context.individual then
+                        local this_card = EventObject:new(card)
+                        local other_card = EventObject:new(context.other_card)
+                        if other_card.object and other_card.get_area() == G.play and context.individual then
                             second = callback({
-                                self = _self,
-                                cardObject = card,
-                                cardType = listenerConfig.object_context,
-                                areaObject = G.play,
-                                areaType = "round",
-                                context = context
+                                SELF = _self,
+                                CONTEXT = context,
+                                self = this_card,
+                                other = other_card
+                            })
+                        end
+                        return combine_return(first,second)
+                    end
+                end
+            }
+        })
+    elseif eventName == "on_round_end" and
+    (config.self_type == "Joker" or config.self_type == "SELF" or config.self_type == "any") and
+    (config.self_area == "SELF" or config.self_area == "any") and
+    (config.other_type == "SELF") and
+    (config.other_area == "SELF") then
+        table.implement(self,{
+            ["@override"] = {
+                calculate = function(old_calc)
+                    return function(_self,card,context)
+                        local first = nil
+                        local second = nil
+                        first = old_calc(_self,card,context)
+                        local this_card = EventObject:new(card)
+                        local other_card = EventObject:new(card)
+                        if context.end_of_round and not context.individual and not context.repetition then
+                            second = callback({
+                                SELF = _self,
+                                CONTEXT = context,
+                                self = this_card,
+                                other = other_card
+                            })
+                        end
+                        return combine_return(first,second)
+                    end
+                end
+            }
+        })
+    elseif eventName == "on_jokers_end" and
+    (config.self_type == "Joker" or config.self_type == "SELF" or config.self_type == "any") and
+    (config.self_area == "SELF" or config.self_area == "any") and
+    (config.other_type == "SELF") and
+    (config.other_area == "SELF") then
+        table.implement(self,{
+            ["@override"] = {
+                calculate = function(old_calc)
+                    return function(_self,card,context)
+                        local first = nil
+                        local second = nil
+                        first = old_calc(_self,card,context)
+                        local this_card = EventObject:new(card)
+                        local other_card = EventObject:new(card)
+                        if context.after and not context.individual and not context.repetition and context.cardarea == G.jokers then
+                            second = callback({
+                                SELF = _self,
+                                CONTEXT = context,
+                                self = this_card,
+                                other = other_card
+                            })
+                        end
+                        return combine_return(first,second)
+                    end
+                end
+            }
+        })
+    elseif eventName == "on_discard_card" and
+    (config.self_type == "Joker" or config.self_type == "SELF" or config.self_type == "any") and
+    (config.self_area == "SELF" or config.self_area == "any") and
+    (config.other_type == "Default" or config.other_type == "Enhanced" or config.other_type == "any") and
+    (config.other_area == "discard" or config.other_area == "any") then
+        table.implement(self,{
+            ["@override"] = {
+                calculate = function(old_calc)
+                    return function(_self,card,context)
+                        local first = nil
+                        local second = nil
+                        first = old_calc(_self,card,context)
+                        local this_card = EventObject:new(card)
+                        local other_card = EventObject:new(context.other_card)
+                        if context.discard and not context.pre_discard then
+                            second = callback({
+                                SELF = _self,
+                                CONTEXT = context,
+                                self = this_card,
+                                other = other_card
+                            })
+                        end
+                        return combine_return(first,second)
+                    end
+                end
+            }
+        })
+    elseif eventName == "on_discard_click" and
+    (config.self_type == "Joker" or config.self_type == "SELF" or config.self_type == "any") and
+    (config.self_area == "SELF" or config.self_area == "any") and
+    (config.other_type == "SELF") and
+    (config.other_area == "SELF") then
+        table.implement(self,{
+            ["@override"] = {
+                calculate = function(old_calc)
+                    return function(_self,card,context)
+                        local first = nil
+                        local second = nil
+                        first = old_calc(_self,card,context)
+                        local this_card = EventObject:new(card)
+                        local other_card = EventObject:new(context.other_card)
+                        if context.pre_discard and not context.discard then
+                            second = callback({
+                                SELF = _self,
+                                CONTEXT = context,
+                                self = this_card,
+                                other = other_card
+                            })
+                        end
+                        return combine_return(first,second)
+                    end
+                end
+            }
+        })
+    elseif eventName == "on_play_click" and
+    (config.self_type == "Joker" or config.self_type == "SELF" or config.self_type == "any") and
+    (config.self_area == "SELF" or config.self_area == "any") and
+    (config.other_type == "SELF") and
+    (config.other_area == "SELF") then
+        table.implement(self,{
+            ["@override"] = {
+                calculate = function(old_calc)
+                    return function(_self,card,context)
+                        local first = nil
+                        local second = nil
+                        first = old_calc(_self,card,context)
+                        local this_card = EventObject:new(card)
+                        local other_card = EventObject:new(context.other_card)
+                        if context.before and not context.individual and not context.repetition and context.cardarea == G.jokers then
+                            second = callback({
+                                SELF = _self,
+                                CONTEXT = context,
+                                self = this_card,
+                                other = other_card
                             })
                         end
                         return combine_return(first,second)

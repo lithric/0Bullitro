@@ -56,6 +56,9 @@ Card.ability = Card.ability
 ---@operator call:CardArea
 _G.CardArea = CardArea
 
+---@type Object[]
+_G.EVENT_FUNCTIONS = {}
+
 --------------------------------------------------------------------------------------------------------------------------
 -- Decoder of GIF-files (not made by me)
 --------------------------------------------------------------------------------------------------------------------------
@@ -907,81 +910,86 @@ function get_X_same(amount_wanted, selected_cards, or_more)
 end
 
 ---@class EventQuery
----@field chips number?
----@field chip_mod number?
----@field x_chips number?
----@field Xchip_mod number?
----@field mult number?
----@field mult_mod number?
----@field x_mult number?
----@field Xmult_mod number?
----@field dollars number?
----@field h_size number?
----@field d_size number?
----@field free_rerolls number?
----@field debt_size number?
----@field odds_bonus number?
----@field odds_mult number?
----@field interest_cap number?
----@field interest_gain number?
----@field interest_amount number?
----@field h_plays number?
+---@field event_id string? ##1#
+---@field chips number? ##2# chips given (loud)
+---@field chip_mod number? ##3# chips given (silent)
+---@field x_chips number? ##4# chips multiplier (loud)
+---@field Xchip_mod number? ##5# chips multiplier (silent) (*note* I had no choice in this)
+---@field mult number? ##6# mult given (loud)
+---@field mult_mod number? ##7# mult given (silent)
+---@field x_mult number? ##8# mult multiplier (loud)
+---@field Xmult_mod number? ##9# mult multiplier (silent) (*note* I had no choice in this)
+---@field dollars number? ##10# round bonus given
+---@field interest_cap number? ##11# extra interest cap
+---@field interest_gain number? ##12# extra interest gain
+---@field interest_amount number? ##13# extra interest per interest
+---@field debt_size number? ##14# extra debt size
+---@field h_plays number? ##15# extra hand plays
+---@field d_size number? ##16# extra discards (not my choice of name btw)
+---@field h_size number? ##17# extra hand size
+---@field odds_bonus number? ##18# extra odds
+---@field odds_mult number? ##19# odds multiplier
+---@field free_rerolls number? ##20# extra free rerolls
+---@field change ({func: fun(query: EventQuery): EventQuery,in_area: CardAreaType,on_object: CardObjectType,on_event: EventName})?
+---@field extra EventQuery?
 ---@field new fun()?
 ---@field __call fun()?
 ---@operator call:EventQuery
 _G.EventQuery = {}
 
-function EventQuery:new()
+---comment
+---@param eventId string?
+---@return EventQuery
+function EventQuery:new(eventId)
+   local eventNumber = #EVENT_FUNCTIONS
+   if EVENT_FUNCTIONS[eventId or eventNumber] ~= nil then eventId = nil end
    local obj = setmetatable({},EventQuery)
-   -- chips given (loud)
+   obj.event_id = eventId or (""..eventNumber)
    obj.chips = 0
-   -- chips given (silent)
    obj.chip_mod = 0
-   -- chips multiplier (loud)
    obj.x_chips = 1
-   -- chips multiplier (silent) (*note* I had no choice in this)
    obj.Xchip_mod = 1
-   -- mult given (loud)
    obj.mult = 0
-   -- mult given (silent)
    obj.mult_mod = 0
-   -- mult multiplier (loud)
    obj.x_mult = 1
-   -- mult multiplier (silent) (*note* I had no choice in this)
    obj.Xmult_mod = 1
-   -- round bonus given
    obj.dollars = 0
-   -- extra hand size
-   obj.h_size = 0
-   -- extra discards (not my choice of name btw)
-   obj.d_size = 0
-   -- extra free rerolls
-   obj.free_rerolls = 0
-   -- extra debt size
-   obj.debt_size = 0
-   -- extra odds
-   obj.odds_bonus = 0
-   -- odds multiplier
-   obj.odds_mult = 1
-   -- extra interest cap
    obj.interest_cap = 0
-   -- extra interest gain
    obj.interest_gain = 0
-   -- extra interest per interest
    obj.interest_amount = 0
-   -- extra hand plays
+   obj.debt_size = 0
    obj.h_plays = 0
+   obj.d_size = 0
+   obj.h_size = 0
+   obj.odds_bonus = 0
+   obj.odds_mult = 1
+   obj.free_rerolls = 0
+   EVENT_FUNCTIONS[eventId or eventNumber] = Object:extend()
+   obj.extra = {}
    return obj
 end
 
+---comment
+---@return EventQuery
 function EventQuery:__call()
    return EventQuery:new()
 end
 
 ---@class GameObjectData: EventQuery
+---@field discards_since_create number?
+---@field hands_played_since_create number?
+---@field consecutive_without_face_cards number?
+---@field consecutive_without_most_played number?
+---@field nine_tally number?
+---@field steel_tally number?
+---@field stone_tally number?
+---@field abilities table?
+---@field joker_list string?
 ---@operator call: GameObjectData
 _G.GameObjectData = {}
 
+---comment
+---@return GameObjectData
 function GameObjectData:new()
    local obj = EventQuery:new()
    setmetatable(obj,GameObjectData)
@@ -997,6 +1005,8 @@ function GameObjectData:new()
    return obj
 end
 
+---comment
+---@return GameObjectData
 function GameObjectData:__call()
    return GameObjectData:new()
 end
@@ -1297,12 +1307,34 @@ function JokerObject:register()
        for k, v in pairs(self.smods.config.extra) do
            table.insert(extra_list,k)
        end
-       self.smods.loc_vars = function(this, info_queue, center)
-           local extra_vars = {}
-           for i, ability in ipairs(extra_list) do
-               table.insert(extra_vars,center.ability.extra[ability])
-           end
-           return {vars = extra_vars}
+       ---comment
+       ---@param this any
+       ---@param info_queue any
+       ---@param card Card
+       ---@return table
+       self.smods.loc_vars = function(this, info_queue, card)
+           return {vars = {
+            card.ability.extra.event_id,
+            card.ability.extra.chips,
+            card.ability.extra.chip_mod,
+            card.ability.extra.x_chips,
+            card.ability.extra.Xchip_mod,
+            card.ability.extra.mult,
+            card.ability.extra.mult_mod,
+            card.ability.extra.x_mult,
+            card.ability.extra.Xmult_mod,
+            card.ability.extra.dollars,
+            card.ability.extra.interest_cap,
+            card.ability.extra.interest_gain,
+            card.ability.extra.interest_amount,
+            card.ability.extra.debt_size,
+            card.ability.extra.h_plays,
+            card.ability.extra.d_size,
+            card.ability.extra.h_size,
+            card.ability.extra.odds_bonus,
+            card.ability.extra.odds_mult,
+            card.ability.extra.free_rerolls,
+           }}
        end
    end
    if self.smods.in_pool == nil then
@@ -1310,8 +1342,8 @@ function JokerObject:register()
            return true
        end
    end
-   self:addEventListener("on_jokers",{area_context = "round",object_context = "self"},function(contextObject)
-      local card = contextObject.cardObject
+   self:addEventListener("on_jokers",nil,function(eventObject)
+      local card = eventObject.self.object
       return {
          mult = card.ability.extra.mult,
          mult_mod = card.ability.extra.mult_mod,
@@ -1323,8 +1355,8 @@ function JokerObject:register()
          Xchip_mod = card.ability.extra.Xchip_mod
       }
    end)
-   self:addEventListener("on_round_bonus",{area_context = "round_bonus",object_context = "self"},function(contextObject)
-      local card = contextObject.cardObject
+   self:addEventListener("on_round_bonus",nil,function(eventObject)
+      local card = eventObject.self.object
       return card.ability.extra.dollars + math.max(math.min(
             (G.GAME.dollars/5)*card.ability.extra.interest_gain*G.GAME.interest_amount,
             (G.GAME.interest_cap/5)*G.GAME.interest_amount
@@ -1332,8 +1364,8 @@ function JokerObject:register()
             0
       )
    end)
-   self:addEventListener("on_add_to_deck",{area_context = "any",object_context = "self"},function(contextObject)
-      local card = contextObject.cardObject
+   self:addEventListener("on_add_to_deck",nil,function(eventObject)
+      local card = eventObject.self.object
       G.GAME.bankrupt_at = G.GAME.bankrupt_at - card.ability.extra.debt_size
       G.hand:change_size(card.ability.extra.h_size)
       G.GAME.round_resets.hands = G.GAME.round_resets.hands + card.ability.extra.h_plays
@@ -1346,8 +1378,8 @@ function JokerObject:register()
          G.GAME.probabilities[k] = (v+card.ability.extra.odds_bonus)*card.ability.extra.odds_mult
       end
    end)
-   self:addEventListener("on_remove_from_deck",{area_context = "any",object_context = "self"},function(contextObject)
-      local card = contextObject.cardObject
+   self:addEventListener("on_remove_from_deck",nil,function(eventObject)
+      local card = eventObject.self.object
       G.GAME.bankrupt_at = G.GAME.bankrupt_at + card.ability.extra.debt_size
       G.hand:change_size(-card.ability.extra.h_size)
       G.GAME.round_resets.hands = G.GAME.round_resets.hands - card.ability.extra.h_plays
@@ -1388,3 +1420,84 @@ function JokerObject:solve_name()
    return solved_name
 end
 JokerObject.addEventListener = Object.addEventListener
+
+
+
+local bean = JokerObject:new("bean",[[
+this is a bean #17#
+]])
+bean:addEventListener("on_round_end",nil,function(eventObject)
+   local card = eventObject.self.object
+   card.ability.extra.h_size = card.ability.extra.h_size-1
+   G.hand:change_size(-1)
+   if (card.ability.extra.h_size <= 0) then
+      card:start_dissolve()
+   end
+end)
+bean:set_attributes({h_size = 5})
+bean:register()
+
+local ice_cream = JokerObject:new("ice cream",[[
+this is a ice cream #2#
+]])
+ice_cream:addEventListener("on_jokers_end",nil,function(eventObject)
+   local card = eventObject.self.object
+   card.ability.extra.chips = card.ability.extra.chips - 5
+   if (card.ability.extra.chips <= 0) then
+      card:start_dissolve()
+   end
+end)
+ice_cream:set_attributes({chips = 100})
+ice_cream:register()
+
+local popcorn = JokerObject:new("popcorn",[[
+this is a popcorn #6#
+]])
+popcorn:addEventListener("on_jokers_end",nil,function(eventObject)
+   local card = eventObject.self.object
+   card.ability.extra.mult = card.ability.extra.mult - 4
+   if (card.ability.extra.mult <= 0) then
+      card:start_dissolve()
+   end
+end)
+popcorn:set_attributes({mult = 20})
+popcorn:register()
+
+local ramen = JokerObject:new("ramen",[[
+this is a ramen #8#
+]])
+ramen:addEventListener("on_discard_card",{other_type = "any",other_area = "any"},function(eventObject)
+   local card = eventObject.self.object
+   card.ability.extra.x_mult = card.ability.extra.x_mult - 0.01
+   if (card.ability.extra.x_mult <= 1) then
+      card:start_dissolve()
+   end
+end)
+ramen:set_attributes({x_mult = 2})
+ramen:register()
+
+local green_guy = JokerObject:new("green guy",[[
+this is a green guy #6#
+]])
+green_guy:addEventListener("on_play_click",nil,function(eventObject)
+   local card = eventObject.self.object
+   card.ability.extra.mult = card.ability.extra.mult + 1
+end)
+green_guy:addEventListener("on_discard_click",nil,function(eventObject)
+   local card = eventObject.self.object
+   card.ability.extra.mult = math.max(card.ability.extra.mult - 1,0)
+end)
+green_guy:register()
+
+local bob = JokerObject:new("bob",[[
+this is a bob #6#
+]])
+green_guy:addEventListener("on_play_click",nil,function(eventObject)
+   local card = eventObject.self.object
+   card.ability.extra.mult = card.ability.extra.mult + 1
+end)
+green_guy:addEventListener("on_discard_click",nil,function(eventObject)
+   local card = eventObject.self.object
+   card.ability.extra.mult = math.max(card.ability.extra.mult - 1,0)
+end)
+green_guy:register()
