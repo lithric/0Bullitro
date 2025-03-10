@@ -954,6 +954,7 @@ function JokerObject:init(name,text)
             mult_prob = 1, -- multiplied odds
             interest_cap = 0, -- extra interest cap
             interest_gain = 0, -- extra interest gain
+            interest_amount = 0, -- extra interest per interest
             h_plays = 0, -- extra hand plays
             discards_since_create = 0,
             hands_played_since_create = 0,
@@ -1139,6 +1140,10 @@ function JokerObject:__SET__in_pool(func)
    self.smods.in_pool = func
 end
 
+function JokerObject:__GET__remove_from_deck()
+   return self.smods.remove_from_deck
+end
+
 function JokerObject:__SET__remove_from_deck(func)
    if self.registered then
        error("Changing the foundational in pool method of a registered joker is undefined behavior!")
@@ -1146,11 +1151,19 @@ function JokerObject:__SET__remove_from_deck(func)
    self.smods.remove_from_deck = func
 end
 
+function JokerObject:__GET__add_to_deck()
+   return self.smods.add_to_deck
+end
+
 function JokerObject:__SET__add_to_deck(func)
    if self.registered then
        error("Changing the foundational in pool method of a registered joker is undefined behavior!")
    end
-   self.smods.remove_from_deck = func
+   self.smods.add_to_deck = func
+end
+
+function JokerObject:__GET__calc_dollar_bonus()
+   return self.smods.calc_dollar_bonus
 end
 
 function JokerObject:__SET__calc_dollar_bonus(func)
@@ -1181,12 +1194,14 @@ function JokerObject:register()
    if name == nil or name ~= self:solve_name() then
        return error("Tried to register a joker with an unsolved name!")
    end
-   SMODS.Atlas({
-       key = "modicon",
-       path = "modicon.png",
-       px = 32,
-       py = 32
-   })
+   if ImageHandler.file_exists("modicon.png") then
+      SMODS.Atlas({
+         key = "modicon",
+         path = "modicon.png",
+         px = 32,
+         py = 32
+      })
+   end
    local atlas_entry = {}
    atlas_entry.key = "Jokers-"..name
    atlas_entry.path = "Jokers-"..name..".png"
@@ -1222,17 +1237,48 @@ function JokerObject:register()
            return true
        end
    end
-   if self.smods.calculate == nil then
-       self.smods.calculate = function(this,card,context)
-           if context.joker_main then
-               return {
-                   mult = card.ability.extra.mult,
-                   x_mult = card.ability.extra.x_mult,
-                   chips = card.ability.extra.chips
-               }
-           end
-       end
-   end
+   self:addEventListener("on_jokers",{area_context = "round",object_context = "self"},function(contextObject)
+      local card = contextObject.cardObject
+      return {
+         mult = card.ability.extra.mult,
+         mult_mod = card.ability.extra.mult_mod,
+         x_mult = card.ability.extra.x_mult,
+         x_mult_mod = card.ability.extra.x_mult_mod,
+         chips = card.ability.extra.chips,
+         chip_mod = card.ability.extra.chip_mod,
+      }
+   end)
+   self:addEventListener("on_round_bonus",{area_context = "round_bonus",object_context = "self"},function(contextObject)
+      local card = contextObject.cardObject
+      return card.ability.extra.dollars + math.max(math.min(
+            (G.GAME.dollars/5)*card.ability.extra.interest_gain*G.GAME.interest_amount,
+            G.GAME.interest_cap
+            ),
+            0
+      )
+   end)
+   self:addEventListener("on_add_to_deck",{area_context = "any",object_context = "self"},function(contextObject)
+      local card = contextObject.cardObject
+      G.GAME.bankrupt_at = G.GAME.bankrupt_at - card.ability.extra.debt_size
+      G.hand:change_size(card.ability.extra.h_size)
+      G.GAME.round_resets.hands = G.GAME.round_resets.hands + card.ability.extra.h_plays
+      G.GAME.round_resets.discards = G.GAME.round_resets.discards + card.ability.extra.d_size
+      G.GAME.current_round.free_rerolls = G.GAME.current_round.free_rerolls + card.ability.extra.free_rerolls
+      calculate_reroll_cost(true)
+      G.GAME.interest_cap = G.GAME.interest_cap + card.ability.extra.interest_cap
+      G.GAME.interest_amount = G.GAME.interest_amount + card.ability.extra.interest_amount
+   end)
+   self:addEventListener("on_remove_from_deck",{area_context = "any",object_context = "self"},function(contextObject)
+      local card = contextObject.cardObject
+      G.GAME.bankrupt_at = G.GAME.bankrupt_at + card.ability.extra.debt_size
+      G.hand:change_size(-card.ability.extra.h_size)
+      G.GAME.round_resets.hands = G.GAME.round_resets.hands - card.ability.extra.h_plays
+      G.GAME.round_resets.discards = G.GAME.round_resets.discards - card.ability.extra.d_size
+      G.GAME.current_round.free_rerolls = G.GAME.current_round.free_rerolls - card.ability.extra.free_rerolls
+      calculate_reroll_cost(true)
+      G.GAME.interest_cap = G.GAME.interest_cap - card.ability.extra.interest_cap
+      G.GAME.interest_amount = G.GAME.interest_amount - card.ability.extra.interest_amount
+   end)
    SMODS.Joker(self.smods)
    self.registered = true
 end

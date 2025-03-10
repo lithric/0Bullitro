@@ -745,54 +745,111 @@ pattern = "function Object:extend()"
 position = "at"
 payload = '''
 
----@alias EventAreaType ("blind"|"round"|"shop"|"booster"|"blind_small"|"blind_big"|"blind_boss"|"booster_card"|"booster_planet"|"booster_tarot"|"booster_joker"|"booster_spectral")?
+---@alias EventAreaType ("blind"|"round"|"round_bonus"|"shop"|"booster"|"blind_small"|"blind_big"|"blind_boss"|"booster_card"|"booster_planet"|"booster_tarot"|"booster_joker"|"booster_spectral"|"any")
 
----@alias EventObjectType ("card"|"planet"|"tarot"|"joker"|"spectral"|"voucher")?
+---@alias EventObjectType ("card"|"planet"|"tarot"|"joker"|"spectral"|"voucher"|"self")
 
 ---@class ListenerConfig
 ---@field listener_context ("on_trigger")?
----@field object_context EventObjectType
----@field area_context EventAreaType
+---@field object_context EventObjectType?
+---@field area_context EventAreaType?
 
 ---@class EventContext
 ---@field self Card
 ---@field cardObject Card
----@field areaObject CardArea
----@field cardType EventObjectType
----@field areaType EventAreaType
+---@field areaObject CardArea?
+---@field cardType EventObjectType?
+---@field areaType EventAreaType?
 
 ---comment
----@param eventName "on_update"|"on_blind_select_start"|"on_blind_skip_click"|"on_blind_reroll_click"|"on_blind_click"|"on_blind_select_end_click"|"on_round_start"|"on_discard_click"|"on_discard_card"|"on_discard_end"|"on_discard_draw_card"|"on_discard_draw_end"|"on_play_click"|"on_play_card"|"on_play_end"|"on_score_start"|"on_score_card"|"on_score_lucky"|"on_score_end"|"on_hold_card"|"on_jokers"|"on_jokers_end"|"on_play_discard_card"|"on_play_discard_shatter"|"on_play_discard_end"|"on_play_draw_card"|"on_play_draw_end"|"on_round_end"|"on_shop_start"|"on_shop_reroll_click"|"on_purchase_click"|"on_create"|"on_add_to_deck"|"on_consumeable"|"on_booster_start"|"on_booster_skip_click"|"on_booster_end"|"on_sell"|"on_shop_end_click"|"on_lose"
+---@param eventName "on_update"|"on_blind_select_start"|"on_blind_skip_click"|"on_blind_reroll_click"|"on_blind_click"|"on_blind_select_end_click"|"on_round_start"|"on_discard_click"|"on_discard_card"|"on_discard_end"|"on_discard_draw_card"|"on_discard_draw_end"|"on_play_click"|"on_play_card"|"on_play_end"|"on_score_start"|"on_score_card"|"on_score_lucky"|"on_score_end"|"on_hold_card"|"on_jokers"|"on_jokers_end"|"on_play_discard_card"|"on_play_discard_shatter"|"on_play_discard_end"|"on_play_draw_card"|"on_play_draw_end"|"on_round_end"|"on_round_bonus"|"on_shop_start"|"on_shop_reroll_click"|"on_purchase_click"|"on_create"|"on_add_to_deck"|"on_remove_from_deck"|"on_destroy"|"on_slice"|"on_consumeable"|"on_booster_start"|"on_booster_skip_click"|"on_booster_end"|"on_sell"|"on_shop_end_click"|"on_lose"
 ---@param listenerConfig ListenerConfig?
 ---@param callback fun(context: EventContext): any
 function Object:addEventListener(eventName,listenerConfig,callback)
    listenerConfig = listenerConfig or {}
-   if not listenerConfig.object_context then listenerConfig.object_context = "joker" end
-   if not listenerConfig.area_context then listenerConfig.area_context = "round" end
-   if eventName == "on_jokers" and listenerConfig.area_context == "round" then
+   if not listenerConfig.object_context then listenerConfig.object_context = "self" end
+   if not listenerConfig.area_context then listenerConfig.area_context = "any" end
+   if eventName == "on_jokers" and listenerConfig.area_context == "round" and listenerConfig.object_context == "self" then
       table.implement(self,{
-         ["@override"] = {
+          ["@override"] = {
             calculate = function(old_calculate)
-               return function(_self,card,context)
+                return function(_self,card,context)
                   local first = nil
                   local second = nil
                   first = old_calculate(_self,card,context)
                   if context.cardarea == G.jokers and context.joker_main then
-                     second = callback({
+                      second = callback({
                         self = _self,
                         cardObject = card,
                         context = context,
                         cardType = listenerConfig.object_context,
                         areaObject = G.jokers,
                         areaType = listenerConfig.area_context,
-                     })
+                      })
                   end
                   return combine_return(first,second)
-               end
+                end
             end
-         }
+          }
       })
-   end
+  elseif eventName == "on_round_bonus" and listenerConfig.object_context == "self" and listenerConfig.area_context == "round_bonus" then
+      table.implement(self,{
+        ["@override"] = {
+          calc_dollar_bonus = function(old_calc)
+            return function(_self,card,context)
+              local first = 0
+              local second = 0
+              first = old_calc(_self,card,context) or 0
+              second = callback({
+                self = _self,
+                cardObject = card,
+                context = context,
+                cardType = listenerConfig.object_context,
+                areaObject = G.jokers,
+                areaType = "round_bonus"
+              }) or 0
+              return first + second
+            end
+          end
+        }
+      })
+    elseif eventName == "on_add_to_deck" and listenerConfig.object_context == "self" and listenerConfig.area_context == "any" then
+      table.implement(self,{
+        ["@override"] = {
+          add_to_deck = function(old_calc)
+            return function(_self,card,context)
+              old_calc(_self,card,context)
+              callback({
+                self = _self,
+                cardObject = card,
+                context = context,
+                cardType = listenerConfig.object_context,
+                areaObject = nil,
+                areaType = listenerConfig.area_context
+              })
+            end
+          end
+        }
+      })
+    elseif eventName == "on_remove_from_deck" and listenerConfig.object_context == "self" and listenerConfig.area_context == "any" then
+      table.implement(self,{
+        ["@override"] = {
+          remove_from_deck = function(old_calc)
+            return function(_self,card,context)
+              old_calc(_self,card,context)
+              callback({
+                self = _self,
+                cardObject = card,
+                context = context,
+                cardType = listenerConfig.object_context,
+                areaObject = nil,
+                areaType = listenerConfig.area_context
+              })
+            end
+          end
+        }
+      })
+    end
 end
 
 function Object:extend()'''
