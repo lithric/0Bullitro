@@ -930,7 +930,6 @@ end
 ---@field odds_bonus number? ##18# extra odds
 ---@field odds_mult number? ##19# odds multiplier
 ---@field free_rerolls number? ##20# extra free rerolls
----@field change ({func: fun(query: EventQuery): EventQuery,in_area: CardAreaType,on_object: CardObjectType,on_event: EventName})?
 ---@field extra EventQuery?
 ---@field new fun()?
 ---@field __call fun()?
@@ -976,6 +975,7 @@ function EventQuery:__call()
 end
 
 ---@class GameObjectData: EventQuery
+---@field previous_odds {normal:number}?
 ---@field discards_since_create number?
 ---@field hands_played_since_create number?
 ---@field consecutive_without_face_cards number?
@@ -993,6 +993,7 @@ _G.GameObjectData = {}
 function GameObjectData:new()
    local obj = EventQuery:new()
    setmetatable(obj,GameObjectData)
+   obj.previous_odds = nil
    obj.discards_since_create = 0
    obj.hands_played_since_create = 0
    obj.consecutive_without_face_cards = 0
@@ -1365,32 +1366,12 @@ function JokerObject:register()
       )
    end)
    self:addEventListener("on_add_to_deck",nil,function(eventObject)
-      local card = eventObject.self.object
-      G.GAME.bankrupt_at = G.GAME.bankrupt_at - card.ability.extra.debt_size
-      G.hand:change_size(card.ability.extra.h_size)
-      G.GAME.round_resets.hands = G.GAME.round_resets.hands + card.ability.extra.h_plays
-      G.GAME.round_resets.discards = G.GAME.round_resets.discards + card.ability.extra.d_size
-      G.GAME.current_round.free_rerolls = G.GAME.current_round.free_rerolls + card.ability.extra.free_rerolls
-      calculate_reroll_cost(true)
-      G.GAME.interest_cap = G.GAME.interest_cap + card.ability.extra.interest_cap
-      G.GAME.interest_amount = G.GAME.interest_amount + card.ability.extra.interest_amount
-      for k,v in pairs(G.GAME.probabilities) do
-         G.GAME.probabilities[k] = (v+card.ability.extra.odds_bonus)*card.ability.extra.odds_mult
-      end
+      local card = eventObject.self
+      card.apply_all_abilities()
    end)
    self:addEventListener("on_remove_from_deck",nil,function(eventObject)
-      local card = eventObject.self.object
-      G.GAME.bankrupt_at = G.GAME.bankrupt_at + card.ability.extra.debt_size
-      G.hand:change_size(-card.ability.extra.h_size)
-      G.GAME.round_resets.hands = G.GAME.round_resets.hands - card.ability.extra.h_plays
-      G.GAME.round_resets.discards = G.GAME.round_resets.discards - card.ability.extra.d_size
-      G.GAME.current_round.free_rerolls = G.GAME.current_round.free_rerolls - card.ability.extra.free_rerolls
-      calculate_reroll_cost(true)
-      G.GAME.interest_cap = G.GAME.interest_cap - card.ability.extra.interest_cap
-      G.GAME.interest_amount = G.GAME.interest_amount - card.ability.extra.interest_amount
-      for k,v in pairs(G.GAME.probabilities) do
-         G.GAME.probabilities[k] = (v/card.ability.extra.odds_mult)-card.ability.extra.odds_bonus
-      end
+      local card = eventObject.self
+      card.resign_all_abilities()
    end)
    SMODS.Joker(self.smods)
    self.registered = true
@@ -1427,11 +1408,10 @@ local bean = JokerObject:new("bean",[[
 this is a bean #17#
 ]])
 bean:addEventListener("on_round_end",nil,function(eventObject)
-   local card = eventObject.self.object
-   card.ability.extra.h_size = card.ability.extra.h_size-1
-   G.hand:change_size(-1)
-   if (card.ability.extra.h_size <= 0) then
-      card:start_dissolve()
+   local card = eventObject.self
+   card.tug("h_size",-1)
+   if (card.get("h_size") <= 0) then
+      card.object:start_dissolve()
    end
 end)
 bean:set_attributes({h_size = 5})
@@ -1441,10 +1421,10 @@ local ice_cream = JokerObject:new("ice cream",[[
 this is a ice cream #2#
 ]])
 ice_cream:addEventListener("on_jokers_end",nil,function(eventObject)
-   local card = eventObject.self.object
-   card.ability.extra.chips = card.ability.extra.chips - 5
-   if (card.ability.extra.chips <= 0) then
-      card:start_dissolve()
+   local card = eventObject.self
+   card.tug("chips",-5)
+   if (card.get("chips") <= 0) then
+      card.object:start_dissolve()
    end
 end)
 ice_cream:set_attributes({chips = 100})
@@ -1454,10 +1434,10 @@ local popcorn = JokerObject:new("popcorn",[[
 this is a popcorn #6#
 ]])
 popcorn:addEventListener("on_jokers_end",nil,function(eventObject)
-   local card = eventObject.self.object
-   card.ability.extra.mult = card.ability.extra.mult - 4
-   if (card.ability.extra.mult <= 0) then
-      card:start_dissolve()
+   local card = eventObject.self
+   card.tug("mult",-4)
+   if (card.get("mult") <= 0) then
+      card.object:start_dissolve()
    end
 end)
 popcorn:set_attributes({mult = 20})
@@ -1467,10 +1447,10 @@ local ramen = JokerObject:new("ramen",[[
 this is a ramen #8#
 ]])
 ramen:addEventListener("on_discard_card",{other_type = "any",other_area = "any"},function(eventObject)
-   local card = eventObject.self.object
-   card.ability.extra.x_mult = card.ability.extra.x_mult - 0.01
-   if (card.ability.extra.x_mult <= 1) then
-      card:start_dissolve()
+   local card = eventObject.self
+   card.tug("x_mult",-0.01)
+   if (card.get("x_mult") <= 1) then
+      card.object:start_dissolve()
    end
 end)
 ramen:set_attributes({x_mult = 2})
@@ -1480,24 +1460,11 @@ local green_guy = JokerObject:new("green guy",[[
 this is a green guy #6#
 ]])
 green_guy:addEventListener("on_play_click",nil,function(eventObject)
-   local card = eventObject.self.object
-   card.ability.extra.mult = card.ability.extra.mult + 1
+   local card = eventObject.self
+   card.tug("mult",1)
 end)
 green_guy:addEventListener("on_discard_click",nil,function(eventObject)
-   local card = eventObject.self.object
-   card.ability.extra.mult = math.max(card.ability.extra.mult - 1,0)
+   local card = eventObject.self
+   card.tug("mult",-1)
 end)
 green_guy:register()
-
-local bob = JokerObject:new("bob",[[
-this is a bob #6#
-]])
-bob:addEventListener("on_play_click",nil,function(eventObject)
-   local card = eventObject.self.object
-   card.ability.extra.mult = card.ability.extra.mult + 1
-end)
-bob:addEventListener("on_discard_click",nil,function(eventObject)
-   local card = eventObject.self.object
-   card.ability.extra.mult = math.max(card.ability.extra.mult - 1,0)
-end)
-bob:register()

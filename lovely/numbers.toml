@@ -653,6 +653,68 @@ function table.get(tbl,...)
     return got
 end
 
+function table.set(tbl,...)
+    if type(tbl) ~= "table" then return error("table expected!") end
+    local setter = tbl
+    local parent = nil
+    local args = {...}
+    for i,v in ipairs(args) do
+        if i == #args then break end
+        if setter == nil then 
+          parent[v] = {}
+          setter = parent[v]
+        end
+        parent = setter
+        setter = setter[v]
+    end
+    parent[args[#args-1]] = args[#args]
+end
+
+function table.at(tbl,index)
+    if index == 0 then return nil end
+    if index > #tbl then return nil end
+    if index < -#tbl then return nil end
+    if #tbl == 0 then return nil end
+    if #tbl == 1 then return tbl[1] end
+    index = index%#tbl
+    if index == 0 then index = #tbl end
+    return tbl[index]
+end
+
+function table.slice(tbl,first,last,step)
+    local sliced = {}
+    local slice_start = 1
+    local slice_end = #tbl
+    local slice_step = 1
+    local last_is_negative = last and last < 0 or false
+    if last_is_negative then
+        slice_end = #tbl+last
+    elseif last then
+        slice_end = last
+    end
+    local first_is_negative = first and first < 0 or false
+    if first_is_negative then
+        slice_start = #tbl+first+1
+    elseif first then
+        slice_start = first
+    end
+    if slice_start == slice_end then
+      sliced[1] = tbl[slice_start]
+      return sliced
+    end
+    local step_is_negative = step and step < 0 or false
+    if step_is_negative then
+        slice_step = -step
+        first_index,last_index = last_index,first_index
+    elseif step then
+        slice_step = step
+    end
+    for i=slice_start,slice_end, slice_step do
+        sliced[#sliced+1] = tbl[i]
+    end
+    return sliced
+end
+
 ---Returns the amount of entries in the list that matched the filter.
 ---@param tbl table
 ---@param pred any
@@ -748,7 +810,6 @@ pattern = "function Object:extend()"
 position = "at"
 payload = '''
 
-
 ---@alias CardAreaType ("discard"|"deck"|"hand"|"joker"|"play"|"title_2"|"title"|"voucher"|"consumeable"|"shop"|"SELF"|"any"|"none")
 
 ---@alias EventAreaContext ("in_blind_select"|"in_round"|"in_round_bonus"|"in_booster_pack"|"in_card_booster_pack"|"in_planet_booster_pack"|"in_tarot_booster_pack"|"in_joker_booster_pack"|"in_spectral_booster_pack")
@@ -759,10 +820,21 @@ payload = '''
 
 ---@alias EventName ("on_update"|"on_blind_select_start"|"on_blind_skip_click"|"on_blind_reroll_click"|"on_blind_click"|"on_blind_select_end_click"|"on_round_start"|"on_discard_click"|"on_discard_card"|"on_discard_end"|"on_discard_draw_card"|"on_discard_draw_end"|"on_play_click"|"on_play_card"|"on_play_end"|"on_score_start"|"on_score_card"|"on_score_lucky"|"on_score_end"|"on_hold_card"|"on_jokers"|"on_jokers_end"|"on_play_discard_card"|"on_play_discard_shatter"|"on_play_discard_end"|"on_play_draw_card"|"on_play_draw_end"|"on_round_end"|"on_round_bonus"|"on_shop_start"|"on_shop_reroll_click"|"on_purchase_click"|"on_create"|"on_add_to_deck"|"on_remove_from_deck"|"on_destroy"|"on_slice"|"on_consumeable"|"on_booster_start"|"on_booster_skip_click"|"on_booster_end"|"on_sell"|"on_shop_end_click"|"on_lose"|"none")
 
+---@alias GameObjectDataType ("event_id"|"chips"|"chip_mod"|"x_chips"|"Xchip_mod"|"mult"|"mult_mod"|"x_mult"|"Xmult_mod"|"dollars"|"interest_cap"|"interest_gain"|"interest_amount"|"debt_size"|"h_plays"|"d_size"|"h_size"|"odds_bonus"|"odds_mult"|"free_rerolls"|"extra"|"discards_since_create"|"hands_played_since_create"|"consecutive_without_face_cards"|"consecutive_without_most_played"|"nine_tally"|"steel_tally"|"stone_tally"|"previous_odds")
+
+_G.GameObjectDataTypes = {"event_id","chips","chip_mod","x_chips","Xchip_mod","mult","mult_mod","x_mult","Xmult_mod","dollars","interest_cap","interest_gain","interest_amount","debt_size","h_plays","d_size","h_size","odds_bonus","odds_mult","free_rerolls","extra","discards_since_create","hands_played_since_create","consecutive_without_face_cards","consecutive_without_most_played","nine_tally","steel_tally","stone_tally","previous_odds"}
+
 _G.dynamic_get = function(obj,...)
     local args = {...}
     return function()
         return table.get(obj,unpack(args))
+    end
+end
+
+_G.dynamic_set = function(obj,...)
+    local args = {...}
+    return function(val)
+        table.set(obj,unpack(args),val)
     end
 end
 
@@ -775,20 +847,137 @@ end
 
 ---@class EventObject
 ---@field object Card
+---@field applied_abilities table
+---@field apply_ability fun(field:GameObjectDataType)
+---@field resign_ability fun(field:GameObjectDataType)
+---@field apply_all_abilities fun()
+---@field resign_all_abilities fun()
 ---@field get_type fun(): CardObjectType?
 ---@field get_area fun(): CardArea?
 ---@field get_area_type fun(): CardAreaType?
+---@field get fun(field: GameObjectDataType|"type"|"area"|"area_type"): number
+---@field set fun(field: GameObjectDataType,val:number,force:boolean?)
+---@field tug fun(field: GameObjectDataType,val:number?,operation_func: (fun(a:number,b:number):number)?,force:boolean?)
 _G.EventObject = {}
 
 ---comment
 ---@param card Card
 ---@return EventObject
 function EventObject:new(card)
+    print("normal")
     local obj = setmetatable({},EventObject)
     obj.object = card
+    obj.applied_abilities = {}
     obj.get_type = dynamic_get(card,"config","center","set")
     obj.get_area = dynamic_get(card,"area")
     obj.get_area_type = dynamic_get(card,"area","config","type")
+    ---comment
+    ---@param field "type"|"area"|"area_type"|GameObjectDataType
+    ---@return unknown|nil
+    obj.get = function(field)
+        if field == "type" then
+            return table.get(card,"config","center","set")
+        elseif field == "area" then
+            return table.get(card,"area")
+        elseif field == "area_type" then
+            return table.get(card,"area","config","type")
+        else
+            return table.get(card,"ability","extra",field)
+        end
+    end
+    ---comment
+    ---@param field GameObjectDataType
+    ---@param val number
+    ---@param force boolean? allows you to force deterministic values to be changed
+    obj.set = function(field,val,force)
+        if ({x_chips=1,Xchip_mod=1,x_mult=1,Xmult_mod=1,odds_mult=1})[field] and not val then val = 1 end
+        if not val then val = 0 end
+        if ({event_id=1,nine_tally=1,steel_tally=1,stone_tally=1,previous_odds=1,extra=1})[field] and not force then error("tried to tug deterministic value of object without force!") end
+        if obj.applied_abilities[field] == nil or obj.applied_abilities[field] == true then
+            local field_value = (obj.applied_abilities[field] and table.get(card,"ability","extra",field)) or ({x_chips=1,Xchip_mod=1,x_mult=1,Xmult_mod=1,odds_mult=1})[field] or 0
+            if field == "interest_cap" then
+                G.GAME.interest_cap = (G.GAME.interest_cap - field_value) + val
+            elseif field == "interest_amount" then
+                G.GAME.interest_amount = (G.GAME.interest_amount - field_value) + val
+            elseif field == "debt_size" then
+                G.GAME.bankrupt_at = (G.GAME.bankrupt_at + field_value) - val
+            elseif field == "h_plays" then
+                G.GAME.round_resets.hands = (G.GAME.round_resets.hands - field_value) + val
+            elseif field == "d_size" then
+                G.GAME.round_resets.discards = (G.GAME.round_resets.discards - field_value) + val
+            elseif field == "h_size" then
+                G.hand:change_size(((G.hand.config.card_limit - field_value) + val)-G.hand.config.card_limit)
+            elseif field == "odds_bonus" then
+                local previous_odds = table.get(card,"ability","extra","previous_odds")
+                if not previous_odds then
+                    table.set(card,"ability","extra","previous_odds",copy(G.GAME.probabilities))
+                    previous_odds = table.get(card,"ability","extra","previous_odds") or error("something went very wrong...")
+                end
+                for k,v in pairs(G.GAME.probabilities) do
+                    if not previous_odds[k] then previous_odds[k] = v end
+                    local initial_odds = previous_odds[k]
+                    local final_odds = (initial_odds+field_value)*(table.get(card,"ability","extra","odds_mult") or 1)
+                    local initial_mult_effect = final_odds/initial_odds
+                    local changed_odds = (initial_odds+val)*(table.get(card,"ability","extra","odds_mult") or 1)
+                    local changed_mult_effect = changed_odds/initial_odds
+                    G.GAME.probabilities[k] = (v/initial_mult_effect)*changed_mult_effect
+                end
+            elseif field == "odds_mult" then
+                local previous_odds = table.get(card,"ability","extra","previous_odds")
+                if not previous_odds then
+                    table.set(card,"ability","extra","previous_odds",copy(G.GAME.probabilities))
+                    previous_odds = table.get(card,"ability","extra","previous_odds") or error("something went very wrong...")
+                end
+                for k,v in pairs(G.GAME.probabilities) do
+                    if not previous_odds[k] then previous_odds[k] = v end
+                    local initial_odds = previous_odds[k]
+                    local final_odds = (initial_odds+(table.get(card,"ability","extra","odds_bonus") or 0))*field_value
+                    local initial_mult_effect = final_odds/initial_odds
+                    local changed_odds = (initial_odds+(table.get(card,"ability","extra","odds_bonus") or 0))*val
+                    local changed_mult_effect = changed_odds/initial_odds
+                    G.GAME.probabilities[k] = (v/initial_mult_effect)*changed_mult_effect
+                end
+            elseif field == "free_rerolls" then
+                G.GAME.current_round.free_rerolls = (G.GAME.current_round.free_rerolls - field_value) + val
+                calculate_reroll_cost(true)
+            end
+        end
+        table.set(card,"ability","extra",field,val)
+    end
+    ---comment
+    ---@param field GameObjectDataType
+    ---@param val number?
+    ---@param operation_func (fun(a:number,b:number): number)?
+    ---@param force boolean? allows you to force deterministic values to be changed
+    obj.tug = function(field,val,operation_func,force)
+        if operation_func == nil then operation_func = function(a,b) return a + b end end
+        local field_value = table.get(card,"ability","extra",field) or ({x_chips=1,Xchip_mod=1,x_mult=1,Xmult_mod=1,odds_mult=1})[field] or 0
+        local new_value = operation_func(field_value,val or 0)
+        obj.set(field,new_value,force)
+    end
+    obj.apply_ability = function(field)
+        if ({event_id=1,nine_tally=1,steel_tally=1,stone_tally=1,previous_odds=1,extra=1})[field] then return end
+        if obj.applied_abilities[field] == true then return end
+        obj.applied_abilities[field] = nil
+        obj.tug(field)
+        obj.applied_abilities[field] = true
+    end
+    obj.resign_ability = function(field)
+        if ({event_id=1,nine_tally=1,steel_tally=1,stone_tally=1,previous_odds=1,extra=1})[field] then return end
+        if obj.applied_abilities[field] == false then return end
+        obj.set(field,({x_chips=1,Xchip_mod=1,x_mult=1,Xmult_mod=1,odds_mult=1})[field] or 0)
+        obj.applied_abilities[field] = false
+    end
+    obj.apply_all_abilities = function()
+        for _,field in ipairs(GameObjectDataTypes) do
+            obj.apply_ability(field)
+        end
+    end
+    obj.resign_all_abilities = function()
+        for _,field in ipairs(GameObjectDataTypes) do
+            obj.resign_ability(field)
+        end
+    end
     return obj
 end
 
@@ -874,15 +1063,15 @@ function Object:addEventListener(eventName,config,callback)
             end),
         })[eventName] or nil,
         calc_dollar_bonus = ({
-            on_round_bonus = refersToSelf(config) and build_function(true,function(a,b) return 
+            on_round_bonus = refersToSelf(config) and build_function(nil,function(a,b) return 
                 (a or 0)+(b or 0)
             end),
         })[eventName] or nil,
         add_to_deck = ({
-            on_add_to_deck = refersToSelf(config) and build_function(true,function()end),
+            on_add_to_deck = refersToSelf(config) and build_function(nil,function()end),
         })[eventName] or nil,
         remove_from_deck = ({
-            on_remove_from_deck = refersToSelf(config) and build_function(true,function()end)
+            on_remove_from_deck = refersToSelf(config) and build_function(nil,function()end)
         })[eventName] or nil,
     }
    })
