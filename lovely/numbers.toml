@@ -991,6 +991,7 @@ end
 ---@param eventName EventName
 ---@param config ListenerConfig?
 ---@param callback fun(context: EventContext): any
+---@return self
 function Object:addEventListener(eventName,config,callback)
     config = config or {}
     if not config.self_type then config.self_type = "any" end
@@ -1075,6 +1076,7 @@ function Object:addEventListener(eventName,config,callback)
         })[eventName] or nil,
     }
    })
+   return self
 end
 
 function Object:extend()'''

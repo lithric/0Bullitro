@@ -931,8 +931,8 @@ end
 ---@field odds_mult number? ##19# odds multiplier
 ---@field free_rerolls number? ##20# extra free rerolls
 ---@field extra EventQuery?
----@field new fun()?
----@field __call fun()?
+---@field new (fun(self:self,eventId:string))?
+---@field __call (fun(self:self):EventQuery)?
 ---@operator call:EventQuery
 _G.EventQuery = {}
 
@@ -1027,8 +1027,33 @@ end
 ---@operator call:JokerObject
 _G.JokerObject = Object:extend()
 
+---comment
+---@param name string
+---@param text string
 function JokerObject:init(name,text)
+   local function log_ordering(extra,start,prefix)
+      if not start then start = 1 end
+      if not prefix then prefix = "" end
+      for key,_ in pairs(extra) do
+         if key == "extra" then
+            goto continue
+         end
+         self.ordering[prefix..key] = start
+         text = text:gsub("#"..prefix..key.."#","#"..(start).."#")
+         start = start+1
+         ::continue::
+      end
+      if extra.extra then
+         log_ordering(extra.extra,start,"extra."..prefix)
+      end
+      local text_table = {}
+      for v in text:gmatch("[^\n]+") do
+         table.insert(text_table,v)
+      end
+      self.smods.loc_txt.text = text_table
+   end
    self.registered = false
+   self.installed = false
    self.size = "default"
    self.smods = {
       key = nil,
@@ -1060,6 +1085,8 @@ function JokerObject:init(name,text)
    }
    self.name = name
    self.text = text
+   self.ordering = {}
+   log_ordering(self.smods.config.extra)
 end
 
 ---comment
@@ -1102,7 +1129,6 @@ function JokerObject:__SET__name(name)
    end
    self.smods.key = name
    self.smods.loc_txt.name = name
-   self.smods.atlas = "Jokers-"..name
 end
 
 function JokerObject:__GET__rarity()
@@ -1185,8 +1211,18 @@ function JokerObject:__SET__text(value)
        error("Changing the foundational text of a registered joker is undefined behavior!")
    end
    if type(value) == "table" then
-       self.smods.loc_txt.text = value
+      self.smods.loc_txt.text = value
+      local raw = ""
+      for i,line in ipairs(value) do
+         if i == 1 then
+            raw = line
+         else
+            raw = raw.."\n"..line
+         end
+      end
+      self.smods.loc_txt.raw_text = raw
    elseif type(value) == "string" then
+      self.smods.loc_txt.raw_text = value
        local lines = {}
        for match in string.gmatch(value,"[^\n]+") do
            table.insert(lines,match)
@@ -1208,11 +1244,19 @@ function JokerObject:__SET__calculate(func)
    self.smods.calculate = func
 end
 
+function JokerObject:__GET__loc_vars()
+   return self.smods.loc_vars
+end
+
 function JokerObject:__SET__loc_vars(func)
    if self.registered then
        error("Changing the foundational local variable method of a registered joker is undefined behavior!")
    end
    self.smods.loc_vars = func
+end
+
+function JokerObject:__GET__in_pool()
+   return self.smods.in_pool
 end
 
 function JokerObject:__SET__in_pool(func)
@@ -1257,92 +1301,89 @@ end
 
 ---comment
 ---@param attributes_table EventQuery
+---@return self
 function JokerObject:set_attributes(attributes_table)
    if self.registered then
        error("Changing the foundational attributes of a registered joker is undefined behavior!")
    end
-   for name, value in pairs(attributes_table) do
-       self.smods.config.extra[name] = value
+   local text = self.smods.loc_txt.raw_text
+   local function log_ordering(extra,start,prefix)
+      if not start then start = 1 end
+      if not prefix then prefix = "" end
+      for key,_ in pairs(extra) do
+         if key == "extra" then
+            goto continue
+         end
+         self.ordering[prefix..key] = start
+         text = text:gsub("#"..prefix..key.."#","#"..(start).."#")
+         start = start+1
+         ::continue::
+      end
+      if extra.extra then
+         log_ordering(extra.extra,start,"extra."..prefix)
+      end
+      local text_table = {}
+      for v in text:gmatch("[^\n]+") do
+         table.insert(text_table,v)
+      end
+      self.smods.loc_txt.text = text_table
    end
+   local function unwrap_extra(tbl,extra,prefix)
+      if not prefix then prefix = "extra." end
+      if not extra then extra = tbl.extra end
+      for k,v in pairs(extra) do
+         tbl[prefix..k] = v
+      end
+      tbl.extra = nil
+      if extra.extra then
+         unwrap_extra(tbl,extra.extra,prefix.."extra.")
+         extra.extra = nil
+      end
+   end
+   if attributes_table.extra then
+      unwrap_extra(attributes_table)
+   end
+   table.implement(self.smods.config.extra,{
+      ["@override"] = attributes_table
+   })
+   log_ordering(self.smods.config.extra)
+   return self
 end
 
 function JokerObject:get_attribute(name)
    return self.smods.config.extra[name]
 end
 
-function JokerObject:register()
-   if self.registered then
-       return error("Tried to double register a joker!")
-   end
-   local name = self.name
-   if name == nil or name ~= self:solve_name() then
-       return error("Tried to register a joker with an unsolved name!")
-   end
-   if ImageHandler.file_exists("modicon.png") then
-      SMODS.Atlas({
-         key = "modicon",
-         path = "modicon.png",
-         px = 32,
-         py = 32
-      })
-   end
-   local atlas_entry = {}
-   atlas_entry.key = "Jokers-"..name
-   atlas_entry.path = "Jokers-"..name..".png"
-
-   if self.size == "default" then
-       atlas_entry.px = 71
-       atlas_entry.py = 95
-   elseif type(self.size) == "number" then
-      atlas_entry.px = 69 * self.size+2
-      atlas_entry.py = 93 * self.size+2
-   elseif type(self.size) == "table" then
-      atlas_entry.px = self.size.px
-      atlas_entry.py = self.size.py
-   else
-       return error("Tried to register a joker with an improper size!")
-   end
-   SMODS.Atlas(atlas_entry)
+function JokerObject:setup()
+   if self.installed then return end
    if self.smods.loc_vars == nil then
-       local extra_list = {}
-       for k, v in pairs(self.smods.config.extra) do
-           table.insert(extra_list,k)
-       end
-       ---comment
-       ---@param this any
-       ---@param info_queue any
-       ---@param card Card
-       ---@return table
-       self.smods.loc_vars = function(this, info_queue, card)
-           return {vars = {
-            card.ability.extra.event_id,
-            card.ability.extra.chips,
-            card.ability.extra.chip_mod,
-            card.ability.extra.x_chips,
-            card.ability.extra.Xchip_mod,
-            card.ability.extra.mult,
-            card.ability.extra.mult_mod,
-            card.ability.extra.x_mult,
-            card.ability.extra.Xmult_mod,
-            card.ability.extra.dollars,
-            card.ability.extra.interest_cap,
-            card.ability.extra.interest_gain,
-            card.ability.extra.interest_amount,
-            card.ability.extra.debt_size,
-            card.ability.extra.h_plays,
-            card.ability.extra.d_size,
-            card.ability.extra.h_size,
-            card.ability.extra.odds_bonus,
-            card.ability.extra.odds_mult,
-            card.ability.extra.free_rerolls,
-           }}
-       end
-   end
-   if self.smods.in_pool == nil then
-       self.smods.in_pool = function(this,var1,var2)
-           return true
-       end
-   end
+      local extra_list = {}
+      for k, v in pairs(self.smods.config.extra) do
+          table.insert(extra_list,k)
+      end
+      ---comment
+      ---@param this any
+      ---@param info_queue any
+      ---@param card Card
+      ---@return table
+      self.smods.loc_vars = function(this, info_queue, card)
+         local function extract_order(ordering,extra,final)
+            if not final then final = {} end
+            for key,index in pairs(ordering) do
+               final[index] = extra[key]
+            end
+            return final
+         end
+         local vars = extract_order(self.ordering,card.ability.extra)
+
+          return {vars = vars}
+      end
+  end
+  if self.smods.in_pool == nil then
+      self.smods.in_pool = function(this,var1,var2)
+          return true
+      end
+  end
    self:addEventListener("on_jokers",nil,function(eventObject)
       local card = eventObject.self.object
       return {
@@ -1373,6 +1414,112 @@ function JokerObject:register()
       local card = eventObject.self
       card.resign_all_abilities()
    end)
+   self.installed = true
+end
+
+---comment
+---@param joker_name string?
+---@param ignore table?
+---@return nil
+function JokerObject:override(joker_name,ignore)
+   if not ignore then ignore = {} end
+   local name = self.name or ""
+   local sprite_sheet_name = nil
+   local sprite_sheet_x = nil
+   local sprite_sheet_y = nil
+   if name:find("|") then
+      name,sprite_sheet_name,sprite_sheet_x,sprite_sheet_y = name:match("^([^|]+)|([^<]+)<(%d+),(%d+)>$")
+      sprite_sheet_x = tonumber(sprite_sheet_x)
+      sprite_sheet_y = tonumber(sprite_sheet_y)
+   end
+   self.name = name
+   if not joker_name then joker_name = self.name or "" end
+   local atlas_entry = {}
+   atlas_entry.key = sprite_sheet_name and "Sprites-"..sprite_sheet_name or "Jokers-"..name
+   atlas_entry.path = sprite_sheet_name and "Sprites-"..sprite_sheet_name..".png" or "Jokers-"..name..".png"
+   if self.size == "default" then
+      atlas_entry.px = 71
+         atlas_entry.py = 95
+   elseif type(self.size) == "number" then
+      atlas_entry.px = 69 * self.size+2
+      atlas_entry.py = 93 * self.size+2
+   elseif type(self.size) == "table" then
+      atlas_entry.px = self.size.px
+      atlas_entry.py = self.size.py
+   else
+      return error("Tried to register a joker with an improper size!")
+   end
+   self:setup()
+   self.smods.atlas = atlas_entry.key
+   self.smods.pos = {
+      x = sprite_sheet_x or 0,
+      y = sprite_sheet_y or 0
+   }
+   local override_object = {}
+   for k,v in pairs(self.smods) do
+      if k == "atlas" and ignore[k] then
+         SMODS.Atlas(atlas_entry)
+      end
+      if ignore[k] or ({key=1,rarity=1,cost=1,unlocked=1,discovered=1,pixel_size=1,display_size=1,soul_pos=1,atlas=1,pos=1,blueprint_compat=1,perishable_compat=1,eternal_compat=1})[k] == nil then
+         override_object[k] = v
+      end
+   end
+   if override_object.config then
+      table.implement(override_object.config,G.P_CENTERS["j_"..joker_name:lower():gsub(" ","_")].config)
+   end
+   SMODS.Joker:take_ownership("j_"..joker_name:lower():gsub(" ","_"),override_object)
+end
+
+function JokerObject:register(config)
+   if not config then config = {} end
+   if self.registered then
+       return error("Tried to double register a joker!")
+   end
+   local name = self.name or ""
+   local sprite_sheet_name = nil
+   local sprite_sheet_x = nil
+   local sprite_sheet_y = nil
+   if string.find(name,"|") then
+      name,sprite_sheet_name,sprite_sheet_x,sprite_sheet_y = name:match("^([^|]+)|([^<]+)<(%d+),(%d+)>$")
+      sprite_sheet_x = tonumber(sprite_sheet_x)
+      sprite_sheet_y = tonumber(sprite_sheet_y)
+   end
+   if not config.force then
+      if name == nil or name ~= self:solve_name() then
+         return error("Tried to register a joker with an unsolved name!")
+      end
+   end
+   if ImageHandler.file_exists("modicon.png") then
+      SMODS.Atlas({
+         key = "modicon",
+         path = "modicon.png",
+         px = 32,
+         py = 32
+      })
+   end
+   local atlas_entry = {}
+   atlas_entry.key = sprite_sheet_name and "Sprites-"..sprite_sheet_name or "Jokers-"..name
+   atlas_entry.path = sprite_sheet_name and "Sprites-"..sprite_sheet_name..".png" or "Jokers-"..name..".png"
+   
+   if self.size == "default" then
+       atlas_entry.px = 71
+       atlas_entry.py = 95
+   elseif type(self.size) == "number" then
+      atlas_entry.px = 69 * self.size+2
+      atlas_entry.py = 93 * self.size+2
+   elseif type(self.size) == "table" then
+      atlas_entry.px = self.size.px
+      atlas_entry.py = self.size.py
+   else
+      return error("Tried to register a joker with an improper size!")
+   end
+   SMODS.Atlas(atlas_entry)
+   self:setup()
+   self.smods.atlas = atlas_entry.key
+   self.smods.pos = {
+      x = sprite_sheet_x or 0,
+      y = sprite_sheet_y or 0
+   }
    SMODS.Joker(self.smods)
    self.registered = true
 end
@@ -1402,10 +1549,41 @@ function JokerObject:solve_name()
 end
 JokerObject.addEventListener = Object.addEventListener
 
+JokerObject:new("Joker",[[
+Original Text:
+{C:mult}+#mult#{} Mult
+-
+Bullitro Valid Alt Texts:
+1. {C:mult}+#mult#{} Mult
+]]):set_attributes({mult=4}):override()
+
+JokerObject:new("Greedy Joker",[[
+Original Text:
+Played cards with
+{C:diamonds}Diamond{} suit give
+{C:mult}+#extra.mult#{} Mult when scored
+-
+Bullitro Valid Alt Texts:
+1. Whenever a {C:diamonds}Diamond{}
+{C:blue}Playing Card{} is {C:green}scored{},
+{C:attention}Greedy Joker{} gives {C:mult}+#extra.mult#{} Mult
+]]):set_attributes({extra={mult=3}}):override()
+
+JokerObject:new("Jolly Joker",[[
+Original Text:
+{C:mult}+8{} Mult if played
+hand contains
+a {C:attention}Pair{}
+-
+Bullitro Valid Alt Texts:
+1. {C:blue}poker hand{} contains {C:attention}Pair{}:
+{C:mult}+#extra.mult#{} Mult
+]]):set_attributes({extra={mult=8}}):override("Jolly")
+
 
 
 local bean = JokerObject:new("bean",[[
-this is a bean #17#
+this is a bean #h_size#
 ]])
 bean:addEventListener("on_round_end",nil,function(eventObject)
    local card = eventObject.self
@@ -1418,7 +1596,7 @@ bean:set_attributes({h_size = 5})
 bean:register()
 
 local ice_cream = JokerObject:new("ice cream",[[
-this is a ice cream #2#
+this is a ice cream #chips#
 ]])
 ice_cream:addEventListener("on_jokers_end",nil,function(eventObject)
    local card = eventObject.self
@@ -1431,7 +1609,7 @@ ice_cream:set_attributes({chips = 100})
 ice_cream:register()
 
 local popcorn = JokerObject:new("popcorn",[[
-this is a popcorn #6#
+this is a popcorn #mult#
 ]])
 popcorn:addEventListener("on_jokers_end",nil,function(eventObject)
    local card = eventObject.self
@@ -1444,7 +1622,7 @@ popcorn:set_attributes({mult = 20})
 popcorn:register()
 
 local ramen = JokerObject:new("ramen",[[
-this is a ramen #8#
+this is a ramen #x_mult#
 ]])
 ramen:addEventListener("on_discard_card",{other_type = "any",other_area = "any"},function(eventObject)
    local card = eventObject.self
@@ -1457,7 +1635,7 @@ ramen:set_attributes({x_mult = 2})
 ramen:register()
 
 local green_guy = JokerObject:new("green guy",[[
-this is a green guy #6#
+this is a green guy #mult#
 ]])
 green_guy:addEventListener("on_play_click",nil,function(eventObject)
    local card = eventObject.self
