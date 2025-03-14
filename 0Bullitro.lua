@@ -1576,8 +1576,7 @@ hand contains
 a {C:attention}Pair{}
 -
 Bullitro Valid Alt Texts:
-1. {C:blue}poker hand{} contains {C:attention}Pair{}:
-{C:mult}+#extra.mult#{} Mult
+1. {C:attention}>=Pair{}: {C:mult}+#extra.mult#{} Mult
 ]]):set_attributes({extra={mult=8}}):override("Jolly")
 
 
