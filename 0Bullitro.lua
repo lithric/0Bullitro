@@ -910,27 +910,29 @@ function get_X_same(amount_wanted, selected_cards, or_more)
 end
 
 ---@class EventQuery
----@field event_id string? ##1#
----@field chips number? ##2# chips given (loud)
----@field chip_mod number? ##3# chips given (silent)
----@field x_chips number? ##4# chips multiplier (loud)
----@field Xchip_mod number? ##5# chips multiplier (silent) (*note* I had no choice in this)
----@field mult number? ##6# mult given (loud)
----@field mult_mod number? ##7# mult given (silent)
----@field x_mult number? ##8# mult multiplier (loud)
----@field Xmult_mod number? ##9# mult multiplier (silent) (*note* I had no choice in this)
----@field dollars number? ##10# round bonus given
----@field interest_cap number? ##11# extra interest cap
----@field interest_gain number? ##12# extra interest gain
----@field interest_amount number? ##13# extra interest per interest
----@field debt_size number? ##14# extra debt size
----@field h_plays number? ##15# extra hand plays
----@field d_size number? ##16# extra discards (not my choice of name btw)
----@field h_size number? ##17# extra hand size
----@field odds_bonus number? ##18# extra odds
----@field odds_mult number? ##19# odds multiplier
----@field free_rerolls number? ##20# extra free rerolls
----@field extra EventQuery?
+---@field event_id string?
+---@field chips number? chips given (loud)
+---@field chip_mod number? chips given (silent)
+---@field x_chips number? chips multiplier (loud)
+---@field Xchip_mod number? chips multiplier (silent) (*note* I had no choice in this)
+---@field mult number? mult given (loud)
+---@field s_mult number? suit multiplier
+---@field suit CardSuitName? target suit
+---@field mult_mod number? mult given (silent)
+---@field x_mult number? mult multiplier (loud)
+---@field Xmult_mod number? mult multiplier (silent) (*note* I had no choice in this)
+---@field dollars number? round bonus given
+---@field interest_cap number? extra interest cap
+---@field interest_gain number? extra interest gain
+---@field interest_amount number? extra interest per interest
+---@field debt_size number? extra debt size
+---@field h_plays number? extra hand plays
+---@field d_size number? extra discards (not my choice of name btw)
+---@field h_size number? extra hand size
+---@field odds_bonus number? extra odds
+---@field odds_mult number? odds multiplier
+---@field free_rerolls number? extra free rerolls
+---@field extra (EventQuery|number)?
 ---@field new (fun(self:self,eventId:string))?
 ---@field __call (fun(self:self):EventQuery)?
 ---@operator call:EventQuery
@@ -1548,6 +1550,19 @@ function JokerObject:solve_name()
    return solved_name
 end
 JokerObject.addEventListener = Object.addEventListener
+
+---Magic Phases:
+---Untap
+---Upkeep
+---Draw
+---First Main Phase
+---Combat Phase
+---Second Main Phase
+---Ending Phase
+
+---Phases Of Round:
+---Blind Phase
+---
 
 JokerObject:new("Joker",[[
 Original Text:

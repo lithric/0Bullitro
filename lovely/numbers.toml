@@ -816,13 +816,7 @@ payload = '''
 
 ---@alias EventAreaStage ("in_starting_blind"|"in_small_blind"|"in_big_blind"|"in_boss_blind")
 
----@alias CardObjectType ("Default"|"Enhanced"|"Joker"|"Edition"|"Tarot"|"Planet"|"Voucher"|"Spectral"|"Booster"|"None"|"SELF"|"any")
-
 ---@alias EventName ("on_update"|"on_blind_select_start"|"on_blind_skip_click"|"on_blind_reroll_click"|"on_blind_click"|"on_blind_select_end_click"|"on_round_start"|"on_discard_click"|"on_discard_card"|"on_discard_end"|"on_discard_draw_card"|"on_discard_draw_end"|"on_play_click"|"on_play_card"|"on_play_end"|"on_score_start"|"on_score_card"|"on_score_lucky"|"on_score_end"|"on_hold_card"|"on_jokers"|"on_jokers_end"|"on_play_discard_card"|"on_play_discard_shatter"|"on_play_discard_end"|"on_play_draw_card"|"on_play_draw_end"|"on_round_end"|"on_round_bonus"|"on_shop_start"|"on_shop_reroll_click"|"on_purchase_click"|"on_create"|"on_add_to_deck"|"on_remove_from_deck"|"on_destroy"|"on_slice"|"on_consumeable"|"on_booster_start"|"on_booster_skip_click"|"on_booster_end"|"on_sell"|"on_shop_end_click"|"on_lose"|"none")
-
----@alias GameObjectDataType ("event_id"|"chips"|"chip_mod"|"x_chips"|"Xchip_mod"|"mult"|"mult_mod"|"x_mult"|"Xmult_mod"|"dollars"|"interest_cap"|"interest_gain"|"interest_amount"|"debt_size"|"h_plays"|"d_size"|"h_size"|"odds_bonus"|"odds_mult"|"free_rerolls"|"extra"|"discards_since_create"|"hands_played_since_create"|"consecutive_without_face_cards"|"consecutive_without_most_played"|"nine_tally"|"steel_tally"|"stone_tally"|"previous_odds")
-
-_G.GameObjectDataTypes = {"event_id","chips","chip_mod","x_chips","Xchip_mod","mult","mult_mod","x_mult","Xmult_mod","dollars","interest_cap","interest_gain","interest_amount","debt_size","h_plays","d_size","h_size","odds_bonus","odds_mult","free_rerolls","extra","discards_since_create","hands_played_since_create","consecutive_without_face_cards","consecutive_without_most_played","nine_tally","steel_tally","stone_tally","previous_odds"}
 
 _G.dynamic_get = function(obj,...)
     local args = {...}
@@ -840,24 +834,24 @@ end
 
 ---@class ListenerConfig
 ---@field listener_type ("on_trigger")?
----@field self_type CardObjectType?
+---@field self_type CardTypeName?
 ---@field self_area CardAreaType?
----@field other_type CardObjectType?
+---@field other_type CardTypeName?
 ---@field other_area CardAreaType?
 
 ---@class EventObject
 ---@field object Card
 ---@field applied_abilities table
----@field apply_ability fun(field:GameObjectDataType)
----@field resign_ability fun(field:GameObjectDataType)
+---@field apply_ability fun(field:AbilityNames)
+---@field resign_ability fun(field:AbilityNames)
 ---@field apply_all_abilities fun()
 ---@field resign_all_abilities fun()
----@field get_type fun(): CardObjectType?
+---@field get_type fun(): CardTypeName?
 ---@field get_area fun(): CardArea?
 ---@field get_area_type fun(): CardAreaType?
----@field get fun(field: GameObjectDataType|"type"|"area"|"area_type"): number
----@field set fun(field: GameObjectDataType,val:number,force:boolean?)
----@field tug fun(field: GameObjectDataType,val:number?,operation_func: (fun(a:number,b:number):number)?,force:boolean?)
+---@field get fun(field: AbilityNames|"type"|"area"|"area_type"): number
+---@field set fun(field: AbilityNames,val:number,force:boolean?)
+---@field tug fun(field: AbilityNames,val:number?,operation_func: (fun(a:number,b:number):number)?,force:boolean?)
 _G.EventObject = {}
 
 ---comment
@@ -872,7 +866,7 @@ function EventObject:new(card)
     obj.get_area = dynamic_get(card,"area")
     obj.get_area_type = dynamic_get(card,"area","config","type")
     ---comment
-    ---@param field "type"|"area"|"area_type"|GameObjectDataType
+    ---@param field "type"|"area"|"area_type"|AbilityNames
     ---@return unknown|nil
     obj.get = function(field)
         if field == "type" then
@@ -886,7 +880,7 @@ function EventObject:new(card)
         end
     end
     ---comment
-    ---@param field GameObjectDataType
+    ---@param field AbilityNames
     ---@param val number
     ---@param force boolean? allows you to force deterministic values to be changed
     obj.set = function(field,val,force)
@@ -945,7 +939,7 @@ function EventObject:new(card)
         table.set(card,"ability","extra",field,val)
     end
     ---comment
-    ---@param field GameObjectDataType
+    ---@param field AbilityNames
     ---@param val number?
     ---@param operation_func (fun(a:number,b:number): number)?
     ---@param force boolean? allows you to force deterministic values to be changed
@@ -969,21 +963,65 @@ function EventObject:new(card)
         obj.applied_abilities[field] = false
     end
     obj.apply_all_abilities = function()
-        for _,field in ipairs(GameObjectDataTypes) do
+        for field,_ in pairs(AbilityNames) do
             obj.apply_ability(field)
         end
     end
     obj.resign_all_abilities = function()
-        for _,field in ipairs(GameObjectDataTypes) do
+        for field,_ in pairs(AbilityNames) do
             obj.resign_ability(field)
         end
     end
     return obj
 end
 
+---@class GameEventContext
+---@field no_blueprint boolean
+---@field blueprint number|nil
+---@field blueprint_card Card
+---@field open_booster boolean
+---@field buying_card boolean
+---@field selling_self boolean
+---@field selling_card boolean
+---@field reroll_shop boolean
+---@field ending_shop boolean
+---@field skip_blind boolean
+---@field skipping_booster boolean
+---@field playing_card_added boolean
+---@field cards Card[]
+---@field first_hand_drawn boolean
+---@field setting_blind boolean
+---@field blind {boss: boolean}
+---@field destroying_card boolean
+---@field full_hand Card[]
+---@field cards_destroyed boolean
+---@field glass_shattered boolean
+---@field remove_playing_cards boolean
+---@field removed Card[]
+---@field using_consumeable boolean
+---@field consumeable Card
+---@field debuffed_hand boolean
+---@field pre_discard boolean
+---@field hook boolean
+---@field discard boolean
+---@field other_card Card
+---@field end_of_round boolean
+---@field individual boolean
+---@field repetition boolean
+---@field cardarea CardArea
+---@field card_effects unknown[]
+---@field game_over boolean
+---@field scoring_hand Card[]
+---@field other_joker Card
+---@field before boolean
+---@field poker_hands unknown
+---@field scoring_name string
+---@field after boolean
+---@field joker_main boolean
+
 ---@class EventContext
 ---@field SELF Object
----@field CONTEXT any
+---@field CONTEXT GameEventContext
 ---@field self EventObject
 ---@field other EventObject
 
@@ -1254,6 +1292,191 @@ _G.bool = function(any)
     if not any or (any == Number:new(0) and not isWaN(any)) or (type(any)=="number" and isNaN(any)) or any == "" then return false end
     return true
 end
+'''
+match_indent = true
+times = 1
+
+#card
+[[patches]]
+[patches.pattern]
+target = "card.lua"
+pattern = '''Card = Moveable:extend()'''
+position = "before"
+payload = '''
+---@alias AbilityNames ("event_id"|"chips"|"h_chips"|"t_chips"|"chip_mod"|"x_chips"|"Xchip_mod"|"mult"|"h_mult"|"t_mult"|"mult_mod"|"x_mult"|"h_x_mult"|"Xmult_mod"|"dollars"|"h_dollars"|"p_dollars"|"interest_cap"|"interest_gain"|"interest_amount"|"debt_size"|"h_plays"|"d_size"|"h_size"|"odds_bonus"|"odds_mult"|"free_rerolls"|"extra"|"discards_since_create"|"hands_played_since_create"|"consecutive_without_face_cards"|"consecutive_without_most_played"|"nine_tally"|"steel_tally"|"stone_tally"|"previous_odds")
+
+_G.AbilityNames = {
+    ["event_id"] = 0,
+    ["chips"] = 0,
+    ["h_chips"] = 0,
+    ["t_chips"] = 0,
+    ["chip_mod"] = 0,
+    ["x_chips"] = 1,
+    ["Xchip_mod"] = 1,
+    ["mult"] = 0,
+    ["h_mult"] = 0,
+    ["t_mult"] = 0,
+    ["mult_mod"] = 0,
+    ["x_mult"] = 1,
+    ["h_x_mult"] = 1,
+    ["Xmult_mod"] = 1,
+    ["dollars"] = 0,
+    ["h_dollars"] = 0,
+    ["p_dollars"] = 0,
+    ["interest_cap"] = 0,
+    ["interest_gain"] = 0,
+    ["interest_amount"] = 0,
+    ["debt_size"] = 0,
+    ["h_plays"] = 0,
+    ["d_size"] = 0,
+    ["h_size"] = 0,
+    ["odds_bonus"] = 0,
+    ["odds_mult"] = 0,
+    ["free_rerolls"] = 0,
+    ["extra"] = {},
+    ["discards_since_create"] = 0,
+    ["hands_played_since_create"] = 0,
+    ["consecutive_without_face_cards"] = 0,
+    ["consecutive_without_most_played"] = 0,
+    ["nine_tally"] = 0,
+    ["steel_tally"] = 0,
+    ["stone_tally"] = 0,
+    ["previous_odds"] = {},
+}
+
+---@alias CardTypeName ("Default"|"Enhanced"|"Joker"|"Edition"|"Tarot"|"Planet"|"Voucher"|"Spectral"|"Booster"|"Back"|"None"|"SELF"|"any")
+---@alias CardSuitName ("Hearts"|"Clubs"|"Diamonds"|"Spades")
+---@alias CardRankName ("2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"|"10"|"Jack"|"Queen"|"King"|"Ace")
+---@alias CardWholeName ("2 of Hearts"|"3 of Hearts"|"4 of Hearts"|"5 of Hearts"|"6 of Hearts"|"7 of Hearts"|"8 of Hearts"|"9 of Hearts"|"10 of Hearts"|"Jack of Hearts"|"Queen of Hearts"|"King of Hearts"|"Ace of Hearts"|"2 of Clubs"|"3 of Clubs"|"4 of Clubs"|"5 of Clubs"|"6 of Clubs"|"7 of Clubs"|"8 of Clubs"|"9 of Clubs"|"10 of Clubs"|"Jack of Clubs"|"Queen of Clubs"|"King of Clubs"|"Ace of Clubs"|"2 of Diamonds"|"3 of Diamonds"|"4 of Diamonds"|"5 of Diamonds"|"6 of Diamonds"|"7 of Diamonds"|"8 of Diamonds"|"9 of Diamonds"|"10 of Diamonds"|"Jack of Diamonds"|"Queen of Diamonds"|"King of Diamonds"|"Ace of Diamonds"|"2 of Spades"|"3 of Spades"|"4 of Spades"|"5 of Spades"|"6 of Spades"|"7 of Spades"|"8 of Spades"|"9 of Spades"|"10 of Spades"|"Jack of Spades"|"Queen of Spades"|"King of Spades"|"Ace of Spades")
+---@alias CardEffectName ("Base"|"Mult"|"Suit Mult"|"Type Mult"|"Hand Size Mult"|"Hand card double"|"Credit"|"Discard Chips"|"No Discard Mult"|"Stone card hands"|"1 in 10 mult"|"Spawn Tarot"|"Random Mult"|"Socialized Mult"|"Bonus Rerolls"|"Card Mult"|"Steel Card Buff"|"Scary Face Cards"|"Joker Mult"|"Discard dollars"|"Low Card double"|"All face cards"|"Even Card Buff"|"Odd Card Buff"|"Ace Buff"|"Face Card dollar Chance"|"Hand played mult"|"Upgrade Hand chance"|"Hand Size"|"Discard Size"|"Stone Card Buff"|"Bonus dollars"|"dollars for Gold cards"|"Prevent Death"|"Shop size"|"Face card double"|"Set Mult"|"Hand Size, Plays"|"Glass Card"|"Copycat"|"X1.5 Mult club 7"|"Jack Discard Effect"|"X1.5 Mult"|"X2 Mult"|"X3 Mult"|"Tarot Buff"|"Disable Blind Effect"|"Enhance"|"Round Bonus"|"Dollar Doubler"|"Card Removal"|"Card Conversion"|"Joker Payout"|"Suit Conversion"|"Hand Upgrade"|"Unlocker"|"Bonus Card"|"Mult Card"|"Wild Card"|"Steel Card"|"Stone Card"|"Gold Card"|"Lucky Card"|"")
+---@alias CardNameName ("Default Base"|"Joker"|"Greedy Joker"|"Lusty Joker"|"Wrathful Joker"|"Gluttonous Joker"|"Jolly Joker"|"Zany Joker"|"Mad Joker"|"Crazy Joker"|"Droll Joker"|"Sly Joker"|"Wily Joker"|"Clever Joker"|"Devious Joker"|"Crafty Joker"|"Half Joker"|"Joker Stencil"|"Four Fingers"|"Mime"|"Credit Card"|"Ceremonial Dagger"|"Banner"|"Mystic Summit"|"Marble Joker"|"Loyalty Card"|"8 Ball"|"Misprint"|"Dusk"|"Raised Fist"|"Chaos the Clown"|"Fibonacci"|"Steel Joker"|"Scary Face"|"Abstract Joker"|"Delayed Gratification"|"Hack"|"Pareidolia"|"Gros Michel"|"Even Steven"|"Odd Todd"|"Scholar"|"Business Card"|"Supernova"|"Ride the Bus"|"Space Joker"|'Egg'|'Burglar'|'Blackboard'|'Runner'|'Ice Cream'|'DNA'|'Splash'|'Blue Joker'|'Sixth Sense'|'Constellation'|'Hiker'|'Faceless Joker'|'Green Joker'|'Superposition'|'To Do List'|"Cavendish"|"Card Sharp"|"Red Card"|"Madness"|"Square Joker"|"Seance"|"Riff-raff"|"Vampire"|"Shortcut"|"Hologram"|"Vagabond"|"Baron"|"Cloud 9"|"Rocket"|"Obelisk"|"Midas Mask"|"Luchador"|"Photograph"|"Gift Card"|"Turtle Bean"|"Erosion"|"Reserved Parking"|"Mail-In Rebate"|"To the Moon"|"Hallucination"|"Fortune Teller"|"Juggler"|"Drunkard"|"Stone Joker"|"Golden Joker"|"Lucky Cat"|"Baseball Card"|"Bull"|"Diet Cola"|"Trading Card"|"Flash Card"|"Popcorn"|"Spare Trousers"|"Ancient Joker"|"Ramen"|"Walkie Talkie"|"Seltzer"|"Castle"|"Smiley Face"|"Campfire"|"Golden Ticket"|"Mr. Bones"|"Acrobat"|"Sock and Buskin"|"Swashbuckler"|"Troubadour"|"Certificate"|"Smeared Joker"|"Throwback"|"Hanging Chad"|"Rough Gem"|"Bloodstone"|"Arrowhead"|"Onyx Agate"|"Glass Joker"|"Showman"|"Flower Pot"|"Blueprint"|"Wee Joker"|"Merry Andy"|"Oops! All 6s"|"The Idol"|"Seeing Double"|"Matador"|"Hit the Road"|"The Duo"|"The Trio"|"The Family"|"The Order"|"The Tribe"|"Stuntman"|"Invisible Joker"|"Brainstorm"|"Satellite"|"Shoot the Moon"|"Driver's License"|"Cartomancer"|"Astronomer"|"Burnt Joker"|"Bootstraps"|"Caino"|"Triboulet"|"Yorick"|"Chicot"|"Perkeo"|"The Fool"|"The Magician"|"The High Priestess"|"The Empress"|"The Emperor"|"The Hierophant"|"The Lovers"|"The Chariot"|"Justice"|"The Hermit"|"The Wheel of Fortune"|"Strength"|"The Hanged Man"|"Death"|"Temperance"|"The Devil"|"The Tower"|"The Star"|"The Moon"|"The Sun"|"Judgement"|"The World"|"Mercury"|"Venus"|"Earth"|"Mars"|"Jupiter"|"Saturn"|"Uranus"|"Neptune"|"Pluto"|"Planet X"|"Ceres"|"Eris"|"Familiar"|"Grim"|"Incantation"|"Talisman"|"Aura"|"Wraith"|"Sigil"|"Ouija"|"Ectoplasm"|"Immolate"|"Ankh"|"Deja Vu"|"Hex"|"Trance"|"Medium"|"Cryptid"|"The Soul"|"Black Hole"|"Overstock"|"Clearance Sale"|"Hone"|"Reroll Surplus"|"Crystal Ball"|"Telescope"|"Grabber"|"Wasteful"|"Tarot Merchant"|"Planet Merchant"|"Seed Money"|"Blank"|"Magic Trick"|"Hieroglyph"|"Director's Cut"|"Paint Brush"|"Overstock Plus"|"Liquidation"|"Glow Up"|"Reroll Glut"|"Omen Globe"|"Observatory"|"Nacho Tong"|"Recyclomancy"|"Tarot Tycoon"|"Planet Tycoon"|"Money Tree"|"Antimatter"|"Illusion"|"Petroglyph"|"Retcon"|"Palette"|"Red Deck"|"Blue Deck"|"Yellow Deck"|"Green Deck"|"Black Deck"|"Magic Deck"|"Nebula Deck"|"Ghost Deck"|"Abandoned Deck"|"Checkered Deck"|"Zodiac Deck"|"Painted Deck"|"Anaglyph Deck"|"Plasma Deck"|"Erratic Deck"|"Challenge Deck"|"Bonus"|"Mult"|"Wild Card"|"Glass Card"|"Steel Card"|"Stone Card"|"Gold Card"|"Lucky Card"|"Base"|"Foil"|"Holographic"|"Polychrome"|"Negative"|"Arcana Pack"|"Jumbo Arcana Pack"|"Mega Arcana Pack"|"Celestial Pack"|"Jumbo Celestial Pack"|"Mega Celestial Pack"|"Spectral Pack"|"Jumbo Spectral Pack"|"Mega Spectral Pack"|"Standard Pack"|"Jumbo Standard Pack"|"Mega Standard Pack"|"Buffoon Pack"|"Jumbo Buffoon Pack"|"Mega Buffoon Pack"|string)
+---@alias CardBoosterKindName ("Arcana"|"Spectral"|"Celestial"|"Standard"|"Buffoon")
+
+---@class CardConfigCenter: Sprite
+---@field key string
+---@field name string
+---@field effect string
+---@field alerted boolean
+---@field order number
+---@field set CardObjectType
+---@field atlas string
+---@field consumeable CardConfigCenter
+---@field demo boolean
+---@field unlocked boolean
+---@field discovered boolean
+---@field pos {x:number,y:number}
+---@field pixel_size {w:number,h:number}
+---@field display_size {w:number,h:number}
+---@field set_sprites (fun(self:self,card:Card,front:unknown))?
+---@field soul_pos {x:number,y:number}
+---@field eternal_compat boolean
+---@field perishable_compat boolean
+---@field no_suit boolean
+---@field no_rank boolean
+---@field replace_base_card boolean
+---@field rarity number
+---@field undiscovered CardConfigCenter
+---@field hc_atlas string
+---@field lc_atlas string
+---@field no_overlay boolean
+
+---@class CardConfig
+---@field card P_CARDS_VALUE|Card
+---@field center CardConfigCenter
+---@field card_key string?
+---@field center_key string?
+---@field h_popup UIElement?
+---@field h_popup_config UIElement?
+
+---comment
+---@class Card: Moveable
+---@field config CardConfig
+---@operator call:Card'''
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "card.lua"
+pattern = '''function Card:set_base(card, initial)'''
+position = "before"
+payload = '''---comment
+---@param card Card
+---@param initial boolean'''
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "card.lua"
+pattern = '''function Card:get_chip_x_mult(context)'''
+position = "before"
+payload = '''---comment
+---@param context GameEventContext
+---@return unknown, unknown|nil'''
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "card.lua"
+pattern = '''function Card:get_end_of_round_effect(context)'''
+position = "before"
+payload = '''---comment
+---@param context GameEventContext
+---@return unknown, unknown|nil'''
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "card.lua"
+pattern = '''function Card:can_sell_card(context)'''
+position = "before"
+payload = '''---comment
+---@param context GameEventContext
+---@return unknown, unknown|nil'''
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "card.lua"
+pattern = '''function Card:calculate_seal(context)'''
+position = "before"
+payload = '''---comment
+---@param context GameEventContext
+---@return unknown, unknown|nil'''
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "card.lua"
+pattern = '''function Card:calculate_joker(context)'''
+position = "before"
+payload = '''---comment
+---@param context GameEventContext
+---@return unknown, unknown|nil'''
+match_indent = true
+times = 1
+
+#game
+[[patches]]
+[patches.pattern]
+target = "game.lua"
+pattern = "    self.P_CARDS = {"
+position = "before"
+payload = '''
+    ---@alias P_CARDS_VALUE {name:string,value:"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"|"10"|"Jack"|"Queen"|"King"|"Ace",suit:"Hearts"|"Clubs"|"Diamonds"|"Spades",pos:{x:number,y:number}}
+    ---@alias P_CARDS_TYPE {[string]:P_CARDS_VALUE}
+    ---@type P_CARDS_TYPE
+'''
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "game.lua"
+pattern = "    self.P_CENTERS = {"
+position = "before"
+payload = '''
+    ---@alias P_CENTERS_VALUE {max:number,freq:number,line:string,label:string,available:boolean,kind:CardBoosterKindName,weight:number,order:number,unlocked:boolean,start_alerted:boolean,discovered:boolean,blueprint_compat:boolean,perishable_compat:boolean,eternal_compat:boolean,rarity:1|2|3|4,cost:number,name:CardNameName,pos:{x:number,y:number},set:CardTypeName,effect:CardEffectName,cost_mult:number,config:EventQuery}
+    ---@alias P_CENTERS_TYPE {[string]:P_CENTERS_VALUE}
+    ---@type P_CENTERS_TYPE
 '''
 match_indent = true
 times = 1
