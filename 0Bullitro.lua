@@ -1080,7 +1080,7 @@ end
 ---@field eternal_compat boolean
 ---@field perishable_compat boolean
 ---@field text string[]|string
----@field calculate fun(self: JokerObject,card: Card,context: GameContext): EventQuery
+---@field calculate fun(self: JokerObject,card: Card,context: GameEventContext): EventQuery
 ---@operator call:JokerObject
 _G.JokerObject = Object:extend()
 
@@ -1128,9 +1128,7 @@ function JokerObject:init(name,text)
       blueprint_compat = true,
       eternal_compat = true,
       perishable_compat = true,
-      config = {
-         extra = GameObjectData:new()
-      },
+      config = GameObjectData:new(),
       loc_vars = nil, -- function
       calculate = nil, -- function
       in_pool = nil, -- function
@@ -1415,7 +1413,7 @@ function JokerObject:setup()
    if self.installed then return end
    if self.smods.loc_vars == nil then
       local extra_list = {}
-      for k, v in pairs(self.smods.config.extra) do
+      for k, v in pairs(safetable(self.smods.config.extra)) do
           table.insert(extra_list,k)
       end
       ---comment
