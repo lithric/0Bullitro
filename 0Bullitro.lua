@@ -911,17 +911,26 @@ end
 
 ---@class EventQuery
 ---@field event_id string?
----@field chips number? chips given (loud)
----@field chip_mod number? chips given (silent)
----@field x_chips number? chips multiplier (loud)
----@field Xchip_mod number? chips multiplier (silent) (*note* I had no choice in this)
----@field mult number? mult given (loud)
+---@field chips number? chips given
+---@field bonus number? alias for chips
+---@field chip_mod number? chips to change by for effect
+---@field s_chips number? suit chips
+---@field t_chips number? poker hand chips
+---@field x_chips number? chips multiplier
+---@field Xchip_mod number? chip mult to change by for effect
+---@field mult number? mult given
 ---@field s_mult number? suit multiplier
 ---@field suit CardSuitName? target suit
----@field mult_mod number? mult given (silent)
----@field x_mult number? mult multiplier (loud)
----@field Xmult_mod number? mult multiplier (silent) (*note* I had no choice in this)
+---@field t_mult number? poker hand multiplier
+---@field type (PokerHandName|TagEffectTimingName|"")? target poker hand
+---@field mult_mod number? mult to change by for effect
+---@field x_mult number? mult multiplier
+---@field h_x_mult number? mult multiplier if held in hand
+---@field Xmult number? alias for x_mult
+---@field Xmult_mod number? mult multiplier to change by for effect
 ---@field dollars number? round bonus given
+---@field h_dollars number? round bonus if held in hand
+---@field p_dollars number? extra money if played
 ---@field interest_cap number? extra interest cap
 ---@field interest_gain number? extra interest gain
 ---@field interest_amount number? extra interest per interest
@@ -929,10 +938,56 @@ end
 ---@field h_plays number? extra hand plays
 ---@field d_size number? extra discards (not my choice of name btw)
 ---@field h_size number? extra hand size
+---@field h_mod number? extra hand size value for some effect
 ---@field odds_bonus number? extra odds
 ---@field odds_mult number? odds multiplier
 ---@field free_rerolls number? extra free rerolls
----@field extra (EventQuery|number)?
+---@field d_remaining number? discards remaining
+---@field size number? hand size restriction for effect
+---@field every number? every other count
+---@field remaining string? text for amount remaining for every other trigger
+---@field max number? max value for effect
+---@field min number? min value for effect
+---@field enhancement_gate string? enhancement string for unknown function
+---@field odds number? odds for some unspecified effect to trigger
+---@field no_pool_flag string? flag to remove something from a pool
+---@field yes_pool_flag string? flag to add something to a pool
+---@field faces number? number of face cards restriction
+---@field hand_add number? number to add for hand played
+---@field discard_sub number? number to subtract for hand discarded
+---@field poker_hand PokerHandName? poker hand restriction for effect
+---@field increase number? amount to increase for unspecified effect
+---@field discards number? discards restriction for unspecified effect
+---@field hands number? hands restriction for unspecified effect
+---@field mod_conv CardEnhancementName? convert string for some enhancement for the cards of an unspecified effect
+---@field suit_conv CardSuitName? convert string for some suit for the cards of an unspecified effect
+---@field max_highlighted number? max highlighted restriction for some unspecified effect
+---@field min_highlighted number? min highlighted restriction for some unspecified effect
+---@field planets number? planets field for some effect
+---@field tarots number? tarots field for some effect
+---@field remove_card boolean? whether to remove the cards specified in the effect
+---@field hand_type PokerHandName? poker hand restriction for some effect
+---@field softlock boolean? what does this even do????
+---@field extra_disp number? I couldn't tell ya. I Have no clue
+---@field extra_hand_bonus number? amount for extra hands at end of round
+---@field extra_discard_bonus number? amount for extra discards at end of round
+---@field no_interest boolean? whether interest is on or off
+---@field joker_slot number? amount of extra joker slots
+---@field consumeable_slot number? amount of extra consumeable slots
+---@field voucher VoucherName? extra voucher
+---@field vouchers VoucherName[]? multiple extra vouchers
+---@field consumeable ConsumeableName? extra consumeable
+---@field consumeables ConsumeableName[]? multiple extra consumeables
+---@field spectral_rate number? rate of spectral cards
+---@field remove_faces boolean? whether to remove the face cards in the deck
+---@field hand_size number? extra hand size
+---@field ante_scaling number? the ante scaling factor
+---@field randomize_rank_suit boolean? whether to randomize the ranks and suits of the deck
+---@field extra (EventQuery|number|CardSealName)?
+---@field spawn_jokers number? number of jokers to spawn
+---@field skip_bonus number? bonus money for skipped blinds
+---@field levels number? number of levels to upgrade for effect
+---@field choose number? number of choices for booster pack effect
 ---@field new (fun(self:self,eventId:string))?
 ---@field __call (fun(self:self):EventQuery)?
 ---@operator call:EventQuery
