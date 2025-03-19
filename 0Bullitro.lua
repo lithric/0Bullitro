@@ -717,7 +717,7 @@ SMODS.Enhancement {
       card.value = WaN
    end,
    in_pool = function(self,args)
-      return true
+      return false
    end
 }
 
@@ -767,7 +767,7 @@ SMODS.Consumable {
      G.E_MANAGER:add_event(Event({trigger = 'after', delay = 0.2,func = function() G.hand:unhighlight_all(); return true end }))
    end,
    in_pool = function(self, args)
-      return true
+      return false
    end
 }
 
@@ -988,15 +988,26 @@ end
 ---@field skip_bonus number? bonus money for skipped blinds
 ---@field levels number? number of levels to upgrade for effect
 ---@field choose number? number of choices for booster pack effect
----@field new (fun(self:self,eventId:string))?
+---@field new (fun(self:self,eventId:string,recurse:number?):EventQuery)?
 ---@field __call (fun(self:self):EventQuery)?
+---@field __index unknown?
+---@field __newindex unknown?
+---@field __GET_SET__Xmult unknown?
+---@field __GET_SET__xmult unknown?
+---@field __GET_SET__x_mult_mod unknown?
+---@field __GET_SET__Xchips unknown?
+---@field __GET_SET__xchips unknown?
+---@field __GET_SET__x_chip_mod unknown?
+---@field __GET_SET__bonus unknown?
 ---@operator call:EventQuery
 _G.EventQuery = {}
 
 ---comment
 ---@param eventId string?
+---@param recurse number?
 ---@return EventQuery
-function EventQuery:new(eventId)
+function EventQuery:new(eventId,recurse)
+   if not recurse then recurse = 1 end
    local eventNumber = #EVENT_FUNCTIONS
    if EVENT_FUNCTIONS[eventId or eventNumber] ~= nil then eventId = nil end
    local obj = setmetatable({},EventQuery)
@@ -1004,11 +1015,11 @@ function EventQuery:new(eventId)
    obj.chips = 0
    obj.chip_mod = 0
    obj.x_chips = 1
-   obj.Xchip_mod = 1
+   obj.Xchip_mod = 0
    obj.mult = 0
    obj.mult_mod = 0
    obj.x_mult = 1
-   obj.Xmult_mod = 1
+   obj.Xmult_mod = 0
    obj.dollars = 0
    obj.interest_cap = 0
    obj.interest_gain = 0
@@ -1021,7 +1032,7 @@ function EventQuery:new(eventId)
    obj.odds_mult = 1
    obj.free_rerolls = 0
    EVENT_FUNCTIONS[eventId or eventNumber] = Object:extend()
-   obj.extra = {}
+   obj.extra = recurse > 0 and EventQuery:new(obj.event_id..(recurse-1),recurse-1) or {}
    return obj
 end
 
@@ -1029,6 +1040,68 @@ end
 ---@return EventQuery
 function EventQuery:__call()
    return EventQuery:new()
+end
+
+function EventQuery:__index(index)
+   if rawget(EventQuery,"__GET_SET__"..index) then
+      return EventQuery["__GET_SET__"..index](self,undefined)
+   elseif rawget(EventQuery,"__GET__"..index) then
+       return EventQuery["__GET__"..index](self)
+   elseif rawget(EventQuery,"__SET__"..index) then
+       return error("Cannot get property of an object with no getter!")
+   else
+       if rawget(self,index) == nil or rawget(self,index) == rawget(EventQuery,index) then
+         rawset(self,index,copy(rawget(EventQuery,index)))
+       end
+       return rawget( self, index )
+   end
+end
+
+function EventQuery:__newindex(index,value)
+   if rawget(EventQuery,"__GET_SET__"..index) then
+       EventQuery["__GET_SET__"..index](self,value)
+   elseif rawget(EventQuery,"__SET__"..index) then
+       EventQuery["__SET__"..index](self,value)
+   elseif rawget(EventQuery,"__GET__"..index) then
+       error("Cannot set property of an object with no setter!")
+   else
+       rawset(self,index,value)
+   end
+end
+
+function EventQuery:__GET_SET__Xmult(val)
+   if val ~= undefined then self.x_mult = val end
+   return self.x_mult
+end
+
+function EventQuery:__GET_SET__xmult(val)
+   if val ~= undefined then self.x_mult = val end
+   return self.x_mult
+end
+
+function EventQuery:__GET_SET__x_mult_mod(val)
+   if val ~= undefined then self.Xmult_mod = val end
+   return self.Xmult_mod
+end
+
+function EventQuery:__GET_SET__xchips(val)
+   if val ~= undefined then self.x_chips = val end
+   return self.x_chips
+end
+
+function EventQuery:__GET_SET__Xchips(val)
+   if val ~= undefined then self.x_chips = val end
+   return self.x_chips
+end
+
+function EventQuery:__GET_SET__x_chip_mod(val)
+   if val ~= undefined then self.Xchip_mod = val end
+   return self.Xchip_mod
+end
+
+function EventQuery:__GET_SET__bonus(val)
+   if val ~= undefined then self.chips = val end
+   return self.chips
 end
 
 ---@class GameObjectData: EventQuery
@@ -1048,6 +1121,7 @@ _G.GameObjectData = {}
 ---comment
 ---@return GameObjectData
 function GameObjectData:new()
+   ---@type GameObjectData
    local obj = EventQuery:new()
    setmetatable(obj,GameObjectData)
    obj.previous_odds = nil
@@ -1081,6 +1155,9 @@ end
 ---@field perishable_compat boolean
 ---@field text string[]|string
 ---@field calculate fun(self: JokerObject,card: Card,context: GameEventContext): EventQuery
+---@field in_pool (fun(self: JokerObject): boolean)|boolean
+---@field remove_from_deck fun(self: JokerObject): unknown
+---@field add_to_deck fun(self: JokerObject): unknown
 ---@operator call:JokerObject
 _G.JokerObject = Object:extend()
 
@@ -1158,8 +1235,9 @@ function JokerObject:__index(index)
    elseif rawget(JokerObject,"__SET__"..index) then
        return error("Cannot get property of an object with no getter!")
    else
-       local val = copy(rawget(JokerObject,index))
-       rawset(self,index,val)
+       if rawget(self,index) == nil or rawget(self,index) == rawget(JokerObject,index) then
+         rawset(self,index,copy(rawget(JokerObject,index)))
+       end
        return rawget( self, index )
    end
 end
@@ -1314,11 +1392,11 @@ function JokerObject:__GET__in_pool()
    return self.smods.in_pool
 end
 
-function JokerObject:__SET__in_pool(func)
+function JokerObject:__SET__in_pool(pred)
    if self.registered then
        error("Changing the foundational in pool method of a registered joker is undefined behavior!")
    end
-   self.smods.in_pool = func
+   self.smods.in_pool = solvepredicate(pred)
 end
 
 function JokerObject:__GET__remove_from_deck()
@@ -1443,13 +1521,9 @@ function JokerObject:setup()
       local card = eventObject.self.object
       return {
          mult = card.ability.extra.mult,
-         mult_mod = card.ability.extra.mult_mod,
          x_mult = card.ability.extra.x_mult,
-         Xmult_mod = card.ability.extra.Xmult_mod,
          chips = card.ability.extra.chips,
-         chip_mod = card.ability.extra.chip_mod,
          x_chips = card.ability.extra.x_chips,
-         Xchip_mod = card.ability.extra.Xchip_mod
       }
    end)
    self:addEventListener("on_round_bonus",nil,function(eventObject)
@@ -1625,27 +1699,27 @@ Bullitro Valid Alt Texts:
 1. {C:mult}+#mult#{} Mult
 ]]):set_attributes({mult=4}):override()
 
-JokerObject:new("Greedy Joker",[[
-Original Text:
-Played cards with
-{C:diamonds}Diamond{} suit give
-{C:mult}+#extra.mult#{} Mult when scored
--
-Bullitro Valid Alt Texts:
-1. Whenever a {C:diamonds}Diamond{}
-{C:blue}Playing Card{} is {C:green}scored{},
-{C:attention}Greedy Joker{} gives {C:mult}+#extra.mult#{} Mult
-]]):set_attributes({extra={mult=3}}):override()
+-- JokerObject:new("Greedy Joker",[[
+-- Original Text:
+-- Played cards with
+-- {C:diamonds}Diamond{} suit give
+-- {C:mult}+#extra.mult#{} Mult when scored
+-- -
+-- Bullitro Valid Alt Texts:
+-- 1. Whenever a {C:diamonds}Diamond{}
+-- {C:blue}Playing Card{} is {C:green}scored{},
+-- {C:attention}Greedy Joker{} gives {C:mult}+#extra.mult#{} Mult
+-- ]]):set_attributes({extra={mult=3}}):override()
 
-JokerObject:new("Jolly Joker",[[
-Original Text:
-{C:mult}+8{} Mult if played
-hand contains
-a {C:attention}Pair{}
--
-Bullitro Valid Alt Texts:
-1. {C:attention}>=Pair{}: {C:mult}+#extra.mult#{} Mult
-]]):set_attributes({extra={mult=8}}):override("Jolly")
+-- JokerObject:new("Jolly Joker",[[
+-- Original Text:
+-- {C:mult}+8{} Mult if played
+-- hand contains
+-- a {C:attention}Pair{}
+-- -
+-- Bullitro Valid Alt Texts:
+-- 1. {C:attention}>=Pair{}: {C:mult}+#extra.mult#{} Mult
+-- ]]):set_attributes({extra={mult=8}}):override("Jolly")
 
 
 
@@ -1660,6 +1734,7 @@ bean:addEventListener("on_round_end",nil,function(eventObject)
    end
 end)
 bean:set_attributes({h_size = 5})
+bean.in_pool = false
 bean:register()
 
 local ice_cream = JokerObject:new("ice cream",[[
@@ -1673,6 +1748,7 @@ ice_cream:addEventListener("on_jokers_end",nil,function(eventObject)
    end
 end)
 ice_cream:set_attributes({chips = 100})
+ice_cream.in_pool = false
 ice_cream:register()
 
 local popcorn = JokerObject:new("popcorn",[[
@@ -1686,6 +1762,7 @@ popcorn:addEventListener("on_jokers_end",nil,function(eventObject)
    end
 end)
 popcorn:set_attributes({mult = 20})
+popcorn.in_pool = false
 popcorn:register()
 
 local ramen = JokerObject:new("ramen",[[
@@ -1699,6 +1776,7 @@ ramen:addEventListener("on_discard_card",{other_type = "any",other_area = "any"}
    end
 end)
 ramen:set_attributes({x_mult = 2})
+ramen.in_pool = false
 ramen:register()
 
 local green_guy = JokerObject:new("green guy",[[
@@ -1712,4 +1790,5 @@ green_guy:addEventListener("on_discard_click",nil,function(eventObject)
    local card = eventObject.self
    card.tug("mult",-1)
 end)
+green_guy.in_pool = false
 green_guy:register()

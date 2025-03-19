@@ -540,51 +540,14 @@ _G.copy = function(obj, seen)
 end
 
 _G.solvepredicate = function(pred)
-    if pred == nil then
-        pred = function() return true end
-    end
-    if type(pred) == "boolean" then
-        if pred then
-            pred = function(v)
-                return bool(v)
-            end
-        else
-            pred = function(v)
-                return not bool(v)
-            end
-        end
-    end
-    if type(pred) == "table" then
-        local comparisonType = pred.match or "and"
-        if comparisonType == "and" then
-            local predicates = pred
-            pred = function(...)
-                for i,cond in ipairs(predicates) do
-                    if not bool(solvepredicate(cond)(...)) then
-                        return false
-                    end
-                end
-                return true
-            end
-        elseif comparisonType == "or" then
-            local predicates = pred
-            pred = function(...)
-                for i,cond in ipairs(predicates) do
-                    if bool(solvepredicate(cond)(...)) then
-                        return true
-                    end
-                end
-                return false
-            end
-        end
-    end
-    if type(pred) ~= "function" then
-        local val = pred
-        pred = function(v)
-            return v == val
-        end
-    end
-    return pred
+    if nil == pred then return function() return true end end
+    if true == pred then return function(v) return not not v end end
+    if false == pred then return function(v) return not v end end
+    local pred_type = type(pred)
+    if pred_type == "function" then return pred end
+    if pred_type == "table" and pred.match == "and" then return function(...) for _,cond in ipairs(pred) do if not solvepredicate(cond)(...) then return false end end return true end end
+    if pred_type == "table" and pred.match == "or" then return function(...) for _,cond in ipairs(pred) do if solvepredicate(cond)(...) then return true end end return false end end
+    return function(v) return v == pred end
 end
 
 ---Returns true if some value inside the list matched the predicate.
@@ -595,6 +558,20 @@ function table.some(tbl,pred)
     pred = solvepredicate(pred)
     for i,v in ipairs(tbl) do
         if pred(v,i,tbl) then
+            return true
+        end
+    end
+    return false
+end
+
+---Returns true if some value inside the list matched the predicate.
+---@param tbl table
+---@param pred any
+---@return boolean
+function table.ksome(tbl,pred)
+    pred = solvepredicate(pred)
+    for k,v in pairs(tbl) do
+        if pred(v,k,tbl) then
             return true
         end
     end
@@ -614,6 +591,20 @@ function table.every(tbl,pred)
    end
    return true
 end
+
+---Returns true if every value inside the list matched the predicate.
+---@param tbl any
+---@param pred any
+---@return boolean
+function table.kevery(tbl,pred)
+    pred = solvepredicate(pred)
+    for k,v in pairs(tbl) do
+        if not pred(v,k,tbl) then
+            return false
+        end
+    end
+    return true
+ end
 
 function table.implement(tbl,impl)
     for k,v in pairs(impl) do
@@ -671,6 +662,7 @@ function table.set(tbl,...)
 end
 
 function table.at(tbl,index)
+    if type(index) ~= "number" then return tbl[index] end
     if index == 0 then return nil end
     if index > #tbl then return nil end
     if index < -#tbl then return nil end
@@ -705,7 +697,7 @@ function table.slice(tbl,first,last,step)
     local step_is_negative = step and step < 0 or false
     if step_is_negative then
         slice_step = -step
-        first_index,last_index = last_index,first_index
+        slice_start,slice_end = slice_end,slice_start
     elseif step then
         slice_step = step
     end
@@ -730,6 +722,21 @@ function table.count(tbl,pred)
     return count
 end
 
+---Returns the amount of entries in the list that matched the filter.
+---@param tbl table
+---@param pred any
+---@return integer
+function table.kcount(tbl,pred)
+    pred = solvepredicate(pred)
+    local count = 0
+    for k,v in pairs(tbl) do
+        if pred(v,k,tbl) then
+            count = count + 1
+        end
+    end
+    return count
+end
+
 ---Returns a new list with all the entries of the list that passed the filter.
 ---@generic H: table
 ---@param tbl `H`
@@ -740,6 +747,22 @@ function table.filter(tbl,pred)
     pred = solvepredicate(pred)
     for i,v in ipairs(tbl) do
         if pred(v,i,tbl) then
+            table.insert(rv,v)
+        end
+    end
+    return rv
+end
+
+---Returns a new list with all the entries of the list that passed the filter.
+---@generic H: table
+---@param tbl `H`
+---@param pred any
+---@return H
+function table.kfilter(tbl,pred)
+    local rv = {}
+    pred = solvepredicate(pred)
+    for k,v in pairs(tbl) do
+        if pred(v,k,tbl) then
             table.insert(rv,v)
         end
     end
@@ -761,20 +784,263 @@ function table.sum(tbl,pred)
     return sum
 end
 
+---Returns the sum of all the values inside the list.
+---@param tbl table
+---@param pred any
+---@return number
+function table.ksum(tbl,pred)
+    local sum = 0
+    pred = solvepredicate(pred)
+    for k,v in pairs(tbl) do
+        if pred(v,k,tbl) then
+            sum = sum + numer(v)
+        end
+    end
+    return sum
+end
+
 ---Returns a new list with each value mapped with the mapping function.
 ---@generic H: table
 ---@param tbl `H`
 ---@generic T
 ---@param func fun(value: any,index: integer,table: H): `T`
----@param pred any
 ---@return T[]
-function table.map(tbl,func,pred)
+function table.map(tbl,func)
     local rv = {}
+    for i,v in ipairs(tbl) do
+        rv[#rv+1] = func(v,i,tbl)
+    end
+    return rv
+end
+
+---Returns a new list with each value mapped with the mapping function.
+---@generic H: table
+---@param tbl `H`
+---@generic T
+---@param func fun(value: any,index: integer,table: H): `T`
+---@return T[]
+function table.kmap(tbl,func)
+    local rv = {}
+    for k,v in pairs(tbl) do
+        rv[k] = func(v,k,tbl)
+    end
+    return rv
+end
+
+function table.flat(tbl,depth)
+    if not depth then depth = 1 end
+    if depth == 0 then return tbl end
+    local rv = {}
+    for _,v in ipairs(tbl) do
+        if type(v) == "table" then
+            for _,w in ipairs(table.flat(v,depth-1)) do
+                rv[#rv+1] = w
+            end
+        else
+            rv[#rv+1] = v
+        end
+    end
+    return rv
+end
+
+function table.flatmap(tbl,func)
+    local rv = {}
+    for i,v in ipairs(tbl) do
+        local val = func(v,i,tbl)
+        if type(val) == "table" then
+            for _,w in ipairs(val) do
+                rv[#rv+1] = w
+            end
+        else
+            rv[#rv+1] = val
+        end
+    end
+    return rv
+end
+
+function table.find(tbl,pred)
     pred = solvepredicate(pred)
     for i,v in ipairs(tbl) do
         if pred(v,i,tbl) then
-            rv[i] = func(v,i,tbl)
+            return v
         end
+    end
+    return nil
+end
+
+function table.kfind(tbl,pred)
+    pred = solvepredicate(pred)
+    for k,v in pairs(tbl) do
+        if pred(v,k,tbl) then
+            return v
+        end
+    end
+    return nil
+end
+
+function table.findlast(tbl,pred)
+    pred = solvepredicate(pred)
+    for i=#tbl,1,-1 do
+        if pred(tbl[i],i,tbl) then
+            return tbl[i]
+        end
+    end
+    return nil
+end
+
+function table.findindex(tbl,pred)
+    pred = solvepredicate(pred)
+    for i,v in ipairs(tbl) do
+        if pred(v,i,tbl) then
+            return i
+        end
+    end
+    return 0
+end
+
+function table.findkey(tbl,pred)
+    pred = solvepredicate(pred)
+    for k,v in pairs(tbl) do
+        if pred(v,k,tbl) then
+            return k
+        end
+    end
+    return nil
+end
+
+function table.findlastindex(tbl,pred)
+    pred = solvepredicate(pred)
+    for i=#tbl,1,-1 do
+        if pred(tbl[i],i,tbl) then
+            return i
+        end
+    end
+    return 0
+end
+
+function table.indexof(tbl,val)
+    for i,v in ipairs(tbl) do
+        if v == val then
+            return i
+        end
+    end
+    return 0
+end
+
+function table.lastindexof(tbl,val)
+    for i=#tbl,1,-1 do
+        if tbl[i] == val then
+            return i
+        end
+    end
+    return 0
+end
+
+function table.keyof(tbl,val)
+    for k,v in pairs(tbl) do
+        if v == val then
+            return k
+        end
+    end
+    return nil
+end
+
+function table.includes(tbl,val)
+    for _,v in ipairs(tbl) do
+        if v == val then
+            return true
+        end
+    end
+    return false
+end
+
+function table.kincludes(tbl,val)
+    for _,v in pairs(tbl) do
+        if v == val then
+            return true
+        end
+    end
+    return false
+end
+
+function table.reduce(tbl,func,init)
+    if #tbl == 0 and nil == init then return error("called reduce on empty table with no initial value") end
+    local rv = init or tbl[1]
+    for i,v in ipairs(tbl) do
+        if not (init==nil and i==1) then
+            rv = func(rv,v,i,tbl)
+        end
+    end
+    return rv
+end
+
+function table.reduceright(tbl,func,init)
+    if #tbl == 0 and nil == init then return error("called reduce on empty table with no initial value") end
+    local rv = init or tbl[#tbl]
+    for i=#tbl,1,-1 do
+        if not (init==nil and i==#tbl) then
+            rv = func(rv,tbl[i],i,tbl)
+        end
+    end
+    return rv
+end
+
+function table.with(tbl,index,val)
+    local rv = {}
+    for i,v in ipairs(tbl) do
+        rv[i] = i == index and val or v
+    end
+    return rv
+end
+
+function table.withkey(tbl,key,val)
+    local rv = {}
+    for k,v in pairs(tbl) do
+        rv[k] = k == key and val or v
+    end
+    return rv
+end
+
+function table.forin(tbl,func)
+    for i,v in ipairs(tbl) do
+        func(v,i,tbl)
+    end
+end
+
+function table.kforin(tbl,func)
+    for k,v in pairs(tbl) do
+        func(v,k,tbl)
+    end
+end
+
+function table.keys(tbl)
+    local rv = {}
+    for k,_ in pairs(tbl) do
+        rv[#rv+1] = k
+    end
+    return rv
+end
+
+function table.ikeys(tbl)
+    local rv = {}
+    for i,_ in ipairs(tbl) do
+        rv[#rv+1] = i
+    end
+    return rv
+end
+
+function table.values(tbl)
+    local rv = {}
+    for _,v in pairs(tbl) do
+        rv[#rv+1] = v
+    end
+    return rv
+end
+
+function table.ivalues(tbl)
+    local rv = {}
+    for _,v in ipairs(tbl) do
+        rv[#rv+1] = v
     end
     return rv
 end
@@ -884,11 +1150,11 @@ function EventObject:new(card)
     ---@param val number
     ---@param force boolean? allows you to force deterministic values to be changed
     obj.set = function(field,val,force)
-        if ({x_chips=1,Xchip_mod=1,x_mult=1,Xmult_mod=1,odds_mult=1})[field] and not val then val = 1 end
+        if ({x_chips=1,x_mult=1,odds_mult=1})[field] and not val then val = 1 end
         if not val then val = 0 end
         if ({event_id=1,nine_tally=1,steel_tally=1,stone_tally=1,previous_odds=1,extra=1})[field] and not force then error("tried to tug deterministic value of object without force!") end
         if obj.applied_abilities[field] == nil or obj.applied_abilities[field] == true then
-            local field_value = (obj.applied_abilities[field] and table.get(card,"ability","extra",field)) or ({x_chips=1,Xchip_mod=1,x_mult=1,Xmult_mod=1,odds_mult=1})[field] or 0
+            local field_value = (obj.applied_abilities[field] and table.get(card,"ability","extra",field)) or ({x_chips=1,x_mult=1,odds_mult=1})[field] or 0
             if field == "interest_cap" then
                 G.GAME.interest_cap = (G.GAME.interest_cap - field_value) + val
             elseif field == "interest_amount" then
@@ -945,7 +1211,7 @@ function EventObject:new(card)
     ---@param force boolean? allows you to force deterministic values to be changed
     obj.tug = function(field,val,operation_func,force)
         if operation_func == nil then operation_func = function(a,b) return a + b end end
-        local field_value = table.get(card,"ability","extra",field) or ({x_chips=1,Xchip_mod=1,x_mult=1,Xmult_mod=1,odds_mult=1})[field] or 0
+        local field_value = table.get(card,"ability","extra",field) or ({x_chips=1,x_mult=1,odds_mult=1})[field] or 0
         local new_value = operation_func(field_value,val or 0)
         obj.set(field,new_value,force)
     end
@@ -959,7 +1225,7 @@ function EventObject:new(card)
     obj.resign_ability = function(field)
         if ({event_id=1,nine_tally=1,steel_tally=1,stone_tally=1,previous_odds=1,extra=1})[field] then return end
         if obj.applied_abilities[field] == false then return end
-        obj.set(field,({x_chips=1,Xchip_mod=1,x_mult=1,Xmult_mod=1,odds_mult=1})[field] or 0)
+        obj.set(field,({x_chips=1,x_mult=1,odds_mult=1})[field] or 0)
         obj.applied_abilities[field] = false
     end
     obj.apply_all_abilities = function()
@@ -1094,7 +1360,7 @@ function Object:addEventListener(eventName,config,callback)
             on_discard_card = refersToCard(config) and referenceInDiscard(config) and build_function(function(context) return 
                 context.discard and not context.pre_discard
             end),
-            on_discard_click = refersToCard(config) and referenceInDiscard(config) and build_function(function(context) return 
+            on_discard_click = refersToSelf(config) and build_function(function(context) return 
                 context.pre_discard and not context.discard
             end),
             on_play_click = refersToSelf(config) and build_function(function(context) return 
@@ -1131,6 +1397,8 @@ end'''
 position = "after"
 payload = '''
 
+---undefined literal
+_G.undefined = {}
 
 ---NaN literal
 ---@type number
@@ -1312,14 +1580,14 @@ _G.AbilityNames = {
     ["t_chips"] = 0,
     ["chip_mod"] = 0,
     ["x_chips"] = 1,
-    ["Xchip_mod"] = 1,
+    ["Xchip_mod"] = 0,
     ["mult"] = 0,
     ["h_mult"] = 0,
     ["t_mult"] = 0,
     ["mult_mod"] = 0,
     ["x_mult"] = 1,
     ["h_x_mult"] = 1,
-    ["Xmult_mod"] = 1,
+    ["Xmult_mod"] = 0,
     ["dollars"] = 0,
     ["h_dollars"] = 0,
     ["p_dollars"] = 0,
@@ -1358,33 +1626,49 @@ _G.AbilityNames = {
 ---@alias ConsumeableName ("c_fool"|"c_magician"|"c_high_priestess"|"c_empress"|"c_emperor"|"c_heirophant"|"c_lovers"|"c_chariot"|"c_justice"|"c_hermit"|"c_wheel_of_fortune"|"c_strength"|"c_hanged_man"|"c_death"|"c_temperance"|"c_devil"|"c_tower"|"c_star"|"c_moon"|"c_sun"|"c_judgement"|"c_world"|"c_mercury"|"c_venus"|"c_earth"|"c_mars"|"c_jupiter"|"c_saturn"|"c_uranus"|"c_neptune"|"c_pluto"|"c_planet_x"|"c_ceres"|"c_eris"|"c_familiar"|"c_grim"|"c_incantation"|"c_talisman"|"c_aura"|"c_wraith"|"c_sigil"|"c_ouija"|"c_ectoplasm"|"c_immolate"|"c_ankh"|"c_deja_vu"|"c_hex"|"c_trance"|"c_medium"|"c_cryptid"|"c_soul"|"c_black_hole")
 ---@alias TagEffectTimingName ('store_joker_create'|'store_joker_modify'|'eval'|'voucher_add'|'new_blind_choice'|'immediate'|'shop_final_pass'|'tag_add'|'round_start_bonus'|'shop_start')
 
----@class CardConfigCenter: Sprite
----@field key string
----@field name string
----@field effect string
----@field alerted boolean
----@field order number
----@field set CardObjectType
----@field atlas string
----@field consumeable CardConfigCenter
----@field demo boolean
----@field unlocked boolean
----@field discovered boolean
----@field pos {x:number,y:number}
----@field pixel_size {w:number,h:number}
----@field display_size {w:number,h:number}
+---@class CardConfigCenter
+---@field key string?
+---@field name string?
+---@field effect CardEffectName?
+---@field alerted boolean?
+---@field order number?
+---@field set CardTypeName?
+---@field atlas string?
+---@field consumeable CardConfigCenter?
+---@field demo boolean?
+---@field unlocked boolean?
+---@field discovered boolean?
+---@field pos {x:number,y:number}?
+---@field pixel_size {w:number,h:number}?
+---@field display_size {w:number,h:number}?
 ---@field set_sprites (fun(self:self,card:Card,front:unknown))?
----@field soul_pos {x:number,y:number}
----@field eternal_compat boolean
----@field perishable_compat boolean
----@field no_suit boolean
----@field no_rank boolean
----@field replace_base_card boolean
----@field rarity number
----@field undiscovered CardConfigCenter
----@field hc_atlas string
----@field lc_atlas string
----@field no_overlay boolean
+---@field soul_pos {x:number,y:number}?
+---@field blueprint_compat boolean?
+---@field eternal_compat boolean?
+---@field perishable_compat boolean?
+---@field no_suit boolean?
+---@field no_rank boolean?
+---@field replace_base_card boolean?
+---@field rarity (1|2|3|4)?
+---@field undiscovered CardConfigCenter?
+---@field hc_atlas string?
+---@field lc_atlas string?
+---@field no_overlay boolean?
+---@field max number?
+---@field min number?
+---@field freq number?
+---@field line string?
+---@field label string?
+---@field available boolean?
+---@field kind CardBoosterKindName?
+---@field weight number?
+---@field start_alerted boolean?
+---@field cost number?
+---@field cost_mult number?
+---@field config EventQuery?
+---@field wip boolean?
+---@field skip_pool boolean?
+---@field omit boolean?
 
 ---@class CardConfig
 ---@field card P_CARDS_VALUE|Card
@@ -1396,6 +1680,7 @@ _G.AbilityNames = {
 
 ---comment
 ---@class Card: Moveable
+---@field ability CardConfigCenter
 ---@field config CardConfig
 ---@operator call:Card'''
 match_indent = true
@@ -1406,7 +1691,7 @@ target = "card.lua"
 pattern = '''function Card:set_base(card, initial)'''
 position = "before"
 payload = '''---comment
----@param card Card
+---@param card Card|P_CARDS_VALUE
 ---@param initial boolean'''
 match_indent = true
 times = 1
@@ -1468,9 +1753,9 @@ target = "game.lua"
 pattern = "    self.P_CARDS = {"
 position = "before"
 payload = '''
-    ---@alias P_CARDS_VALUE {name:string,value:"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"|"10"|"Jack"|"Queen"|"King"|"Ace",suit:"Hearts"|"Clubs"|"Diamonds"|"Spades",pos:{x:number,y:number}}
-    ---@alias P_CARDS_TYPE {[string]:P_CARDS_VALUE}
-    ---@type P_CARDS_TYPE
+---@alias P_CARDS_VALUE {name:string,value:"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"|"10"|"Jack"|"Queen"|"King"|"Ace",suit:"Hearts"|"Clubs"|"Diamonds"|"Spades",pos:{x:number,y:number}}
+---@alias P_CARDS_TYPE {[string]:P_CARDS_VALUE}
+---@type P_CARDS_TYPE
 '''
 match_indent = true
 times = 1
@@ -1480,9 +1765,8 @@ target = "game.lua"
 pattern = "    self.P_CENTERS = {"
 position = "before"
 payload = '''
-    ---@alias P_CENTERS_VALUE {max:number,freq:number,line:string,label:string,available:boolean,kind:CardBoosterKindName,weight:number,order:number,unlocked:boolean,start_alerted:boolean,discovered:boolean,blueprint_compat:boolean,perishable_compat:boolean,eternal_compat:boolean,rarity:1|2|3|4,cost:number,name:CardNameName,pos:{x:number,y:number},set:CardTypeName,effect:CardEffectName,cost_mult:number,config:EventQuery}
-    ---@alias P_CENTERS_TYPE {[string]:P_CENTERS_VALUE}
-    ---@type P_CENTERS_TYPE
+---@alias P_CENTERS_VALUE {max:number,freq:number,line:string,label:string,available:boolean,kind:CardBoosterKindName,weight:number,order:number,unlocked:boolean,start_alerted:boolean,discovered:boolean,blueprint_compat:boolean,perishable_compat:boolean,eternal_compat:boolean,rarity:1|2|3|4,cost:number,name:CardNameName,pos:{x:number,y:number},set:CardTypeName,effect:CardEffectName,cost_mult:number,config:EventQuery,wip:boolean,demo:boolean,alerted:boolean}
+---@alias P_CENTERS_TYPE {[string]:P_CENTERS_VALUE}
+---@type P_CENTERS_TYPE
 '''
 match_indent = true
-times = 1
