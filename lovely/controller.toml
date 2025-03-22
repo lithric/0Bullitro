@@ -1,0 +1,33 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+[[patches]]
+[patches.pattern]
+target = "engine/controller.lua"
+pattern = "---@class Controller"
+position = "at"
+payload = '''
+
+---@alias Position2D {x:number,y:number}
+
+---@class ControlHandle
+---@field handled boolean
+---@field target (Card|Node|UIElement)?
+---@field time number?
+---@field prev_target (Card|Node|UIElement)?
+---@field T Position2D?
+
+---@class Controller: Object
+---@field clicked ControlHandle
+---@field focused ControlHandle
+---@field dragging ControlHandle
+---@field hovering ControlHandle
+---@field released_on ControlHandle
+---@field cursor_down ControlHandle
+---@field cursor_up ControlHandle
+---@field cursor_hover ControlHandle
+---@operator call:Controller'''
+match_indent = true
+times = 1

@@ -1,0 +1,55 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+# moveable
+[[patches]]
+[patches.pattern]
+target = "engine/moveable.lua"
+pattern = "---@class Moveable: Node"
+position = "at"
+payload = '''
+
+---@class RoleObject
+---@field offset Position2D
+---@field role_type ('Major'|'Minor'|'Glued')?
+---@field bond ('Strong'|'Weak')?
+---@field xy_bond ('Strong'|'Weak')?
+---@field wh_bond ('Strong'|'Weak')?
+---@field r_bond ('Strong'|'Weak')?
+---@field scale_bond ('Strong'|'Weak')?
+---@field type ('tl'|'tm'|'tr'|'cl'|'cm'|'cr'|'bl'|'bm'|'br'|'tli'|'tmi'|'tri'|'cli'|'cmi'|'cri'|'bli'|'bmi'|'bri'|string)?
+---@field draw_major Moveable?
+---@field major Moveable?
+
+---@class Moveable: Node
+---@field role RoleObject
+---@field zoom number?
+---@operator call:Moveable'''
+match_indent = true
+times = 1
+
+[[patches]]
+[patches.pattern]
+target = "engine/moveable.lua"
+pattern = "---@param args {T: table, container: Node}"
+position = "at"
+payload = '''
+
+---@function
+---@param X ({T:[number,number,number,number]}|number)?
+---@param Y number?
+---@param W number?
+---@param H number?'''
+match_indent = true
+times = 1
+
+[[patches]]
+[patches.pattern]
+target = "engine/moveable.lua"
+pattern = "---@param args {major: Moveable, bond: string, offset: table, type: string}"
+position = "at"
+payload = "---@param args (RoleObject|Moveable)?"
+match_indent = true
+times = 1

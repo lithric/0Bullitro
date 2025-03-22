@@ -1,0 +1,167 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+
+[[patches]]
+[patches.pattern]
+target = "engine/object.lua"
+pattern = "Object = {}"
+position = "before"
+payload = '''
+
+---@class Object
+---@field extend fun(self:self): {super:self}
+---@field is fun(self:self,T:any): boolean
+---@field init fun(self:self,...)
+---@operator call(...):self'''
+match_indent = true
+times = 1
+
+[[patches]]
+[patches.pattern]
+target = "engine/object.lua"
+pattern = "function Object:extend()"
+position = "before"
+payload = '''
+
+---comment
+---@param eventName EventName
+---@param listener fun(context: EventContext): any
+---@param options ListenerConfig?
+---@return self
+function Object:addEventListener(eventName,listener,options)
+    local eventData = nil
+    if table.includes({"on_score_card","on_discard_card"},eventName) then
+        eventData = function(_self,card,context)
+            return {
+                SELF = _self,
+                CONTEXT = context,
+                self = EventObject:new(card),
+                other = EventObject:new(context.other_card)
+            }
+        end
+    elseif table.includes({"on_joker_card"},eventName) then
+        eventData = function(_self,card,context)
+            return {
+                SELF = _self,
+                CONTEXT = context,
+                self = EventObject:new(card),
+                other = EventObject:new(context.other_joker)
+            }
+        end
+    else
+        eventData = function(_self,card,context)
+            return {
+                SELF = _self,
+                CONTEXT = context,
+                self = EventObject:new(card),
+                other = EventObject:new(card)
+            }
+        end
+    end
+    ---@type table<EventName,(fun(data:EventContext):boolean)>
+    local eventCondition = {
+        on_update = function(data) return true end,
+        on_update_card = function(data) return data.other.object and data.other.object ~= data.self.object end,
+        on_blind_select_start = function(data) return false, error("blind select start not yet implemented") end,
+        on_blind_skip_click = function(data) return data.CONTEXT.skip_blind end,
+        on_blind_reroll_click = function(data) return data.CONTEXT.blind.boss end,
+        on_blind_click = function(data) return not not data.CONTEXT.setting_blind and not data.self.object.getting_sliced end,
+        on_blind_select_end_click = function(data) return false, error("blind select end click not yet implemented") end,
+        on_round_start = function(data) return data.CONTEXT.first_hand_drawn end,
+        on_discard_click = function(data) return data.CONTEXT.pre_discard and not data.CONTEXT.discard end,
+        on_discard = function(data) return data.other.object == data.self.object and data.CONTEXT.discard and data.other:get_area() == G.discard and not data.CONTEXT.pre_discard end,
+        on_discard_card = function(data) return data.other.object and data.CONTEXT.discard and data.other:get_area() == G.discard and not data.CONTEXT.pre_discard and data.other.object ~= data.self.object end,
+        on_discard_end = function(data) return false, error("on discard end not yet implemented") end,
+        on_discard_draw = function(data) return false, error("on discard draw not yet implemented") end,
+        on_discard_draw_card = function(data) return false, error("on discard draw card not yet implemented") end,
+        on_discard_draw_end = function(data) return false, error("on discard draw end not yet implemented") end,
+        on_play_click = function(data) return false, error("on play click not yet implemented") end,
+        on_play = function(data) return false, error("on play not yet implemented") end,
+        on_play_card = function(data) return false, error("on play card not yet implemented") end,
+        on_play_end = function(data) return data.CONTEXT.before and not data.CONTEXT.individual end,
+        on_score_start = function(data) return false, error("on score start not yet implemented") end,
+        on_score = function(data) return data.other.object and data.other.object == data.self.object and data.CONTEXT.individual and data.other:get_area() == G.play end,
+        on_score_card = function(data) return data.other.object and data.CONTEXT.individual and data.other:get_area() == G.play and data.other.object ~= data.self.object end,
+        on_score_lucky = function(data) return data.other.object and data.other.object == data.self.object and data.CONTEXT.individual and data.other:get_area() == G.play and data.other.object.lucky_trigger end,
+        on_score_card_lucky = function(data) return data.other.object and data.CONTEXT.individual and data.other:get_area() == G.play and data.other.object.lucky_trigger and data.other.object ~= data.self.object end,
+        on_score_end = function(data) return false, error("on score end not yet implemented") end,
+        on_hold = function(data) return data.other.object and data.other.object == data.self.object and data.CONTEXT.individual and data.other:get_area() == G.hand end,
+        on_hold_card = function(data) return data.other.object and data.CONTEXT.individual and data.other:get_area() == G.hand and data.other.object ~= data.self.object end,
+        on_joker = function(data) return data.CONTEXT.cardarea == G.jokers and data.CONTEXT.joker_main end,
+        on_joker_card = function(data) return data.CONTEXT.other_joker and data.other.object and data.other.object ~= data.self.object end,
+        on_jokers_end = function(data) return false, error("on jokers end not yet implemented") end,
+        on_play_discard = function(data) return false, error("on play discard not yet implemented") end,
+        on_play_discard_card = function(data) return false, error("on play discard card not yet implemented") end,
+        on_play_discard_shatter = function(data) return false, error("on play discard shatter not yet implemented") end,
+        on_play_discard_card_shatter = function(data) return false, error("on play discard card shatter not yet implemented") end,
+        on_play_discard_end = function(data) return data.CONTEXT.after and not data.CONTEXT.individual and not data.CONTEXT.repetition and data.CONTEXT.cardarea == G.jokers end,
+        on_play_draw = function(data) return false, error("on play draw not yet implemented") end,
+        on_play_draw_card = function(data) return false, error("on play draw card not yet implemented") end,
+        on_play_draw_end = function(data) return false, error("on play draw end not yet implemented") end,
+        on_round_end = function(data) return data.CONTEXT.end_of_round and not data.CONTEXT.individual and not data.CONTEXT.repetition end,
+        on_round_bonus = function(data) return true end,
+        on_shop_start = function(data) return false, error("on shop start not yet implemented") end,
+        on_create = function(data) return false, error("on create not yet implemented") end,
+        on_create_card = function(data) return false, error("on create card not yet implemented") end,
+        on_shop_reroll_click = function(data) return data.CONTEXT.reroll_shop end,
+        on_purchase_click = function(data) return data.CONTEXT.buying_card end,
+        on_purchase = function(data) return data.other.object and data.other.object == data.self.object and data.CONTEXT.buying_card end,
+        on_purchase_card = function(data) return data.other.object and data.CONTEXT.buying_card and data.other.object ~= data.self.object end,
+        on_add_to_deck = function(data) return true end,
+        on_add_card_to_deck = function(data) return data.other.object and data.CONTEXT.playing_card_added and data.other.object ~= data.self.object end,
+        on_remove_from_deck = function(data) return true end,
+        on_remove_card_from_deck = function(data) return data.other.object and data.CONTEXT.remove_playing_cards and data.other.object ~= data.self.object end,
+        on_destroy = function(data) return data.CONTEXT.destroying_card and data.other.object and data.other.object == data.self.object end,
+        on_destroy_card = function(data) return data.CONTEXT.destroying_card and data.other.object and data.other.object ~= data.self.object end,
+        on_slice = function(data) return data.CONTEXT.destroying_card and data.other.object and data.other.object.getting_sliced and data.other.object == data.self.object end,
+        on_slice_card = function(data) return data.CONTEXT.destroying_card and data.other.object and data.other.object.getting_sliced and data.other.object ~= data.self.object end,
+        on_use = function(data) return data.CONTEXT.using_consumeable and data.other.object and data.other.object == data.self.object end,
+        on_use_card = function(data) return data.CONTEXT.using_consumeable and data.other.object and data.other.object ~= data.self.object end,
+        on_open = function(data) return data.CONTEXT.open_booster and data.other.object and data.other.object == data.self.object end,
+        on_booster_open = function(data) return data.CONTEXT.open_booster and data.other.object and data.other.object ~= data.self.object end,
+        on_booster_skip_click = function(data) return data.CONTEXT.skipping_booster end,
+        on_booster_end = function(data) return false, error("on booster end not yet implemented") end,
+        on_sell = function(data) return data.CONTEXT.selling_self end,
+        on_sell_card = function(data) return data.CONTEXT.selling_card and not data.CONTEXT.selling_self end,
+        on_shop_end_click = function(data) return data.CONTEXT.ending_shop end,
+        on_lose = function(data) return data.CONTEXT.game_over end,
+        none = function(data) return false end,
+    }
+    options = options or {}
+    local function build_function(cond_func,combine_func)
+        if combine_func == nil then combine_func = combine_return end
+        return function(old_func)
+            return function(_self,card,context)
+                local first = nil
+                local second = nil
+                first = old_func(_self,card,context)
+                local gotEventData = eventData(_self,card,context)
+                if solvepredicate(cond_func)(gotEventData) then
+                    second = listener(gotEventData)
+                end
+                return combine_func(first,second)
+            end
+        end
+    end
+   table.implement(self,{
+    ["@override"] = {
+        calculate = table.includes({"on_joker","on_score_card","on_round_end","on_joker_end","on_discard_card","on_discard_click","on_play_click"},eventName) and
+        build_function(eventCondition[eventName]) or nil,
+        calc_dollar_bonus = table.includes({"on_round_bonus"},eventName) and build_function(eventCondition[eventName],function(a,b)
+            local sum = (a or 0)+(b or 0)
+            if sum == 0 then return nil end
+            return sum
+        end),
+        add_to_deck = table.includes({"on_add_to_deck"},eventName) and build_function(eventCondition[eventName],function()end) or nil,
+        remove_from_deck = table.includes({"on_remove_from_deck",eventName}) and build_function(eventCondition[eventName],function()end) or nil,
+    }
+   })
+   return self
+end
+
+'''
+match_indent = true
+times = 1

@@ -1,0 +1,21 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+[[patches]]
+[patches.pattern]
+target = "engine/object.lua"
+pattern = "--||--"
+position = "before"
+payload = '''
+---@alias CardAreaType ("discard"|"deck"|"hand"|"joker"|"play"|"title_2"|"title"|"voucher"|"consumeable"|"shop"|"none")
+
+---@alias EventAreaContext ("in_blind_select"|"in_round"|"in_round_bonus"|"in_booster_pack"|"in_card_booster_pack"|"in_planet_booster_pack"|"in_tarot_booster_pack"|"in_joker_booster_pack"|"in_spectral_booster_pack")
+
+---@alias EventAreaStage ("in_starting_blind"|"in_small_blind"|"in_big_blind"|"in_boss_blind")
+
+---@alias EventName ("on_update"|"on_update_card"|"on_blind_select_start"|"on_blind_skip_click"|"on_blind_reroll_click"|"on_blind_click"|"on_round_start"|"on_discard_click"|"on_discard"|"on_discard_card"|"on_discard_end"|"on_discard_draw"|"on_discard_draw_card"|"on_discard_draw_end"|"on_play_click"|"on_play"|"on_play_card"|"on_play_end"|"on_score_start"|"on_score"|"on_score_card"|"on_score_lucky"|"on_score_card_lucky"|"on_score_end"|"on_hold"|"on_hold_card"|"on_joker"|"on_joker_card"|"on_joker_end"|"on_play_discard"|"on_play_discard_card"|"on_play_discard_shatter"|"on_play_discard_card_shatter"|"on_play_discard_end"|"on_play_draw"|"on_play_draw_card"|"on_play_draw_end"|"on_round_end"|"on_round_bonus"|"on_shop_start"|"on_create"|"on_create_card"|"on_shop_reroll_click"|"on_purchase_click"|"on_purchase"|"on_purchase_card"|"on_add_to_deck"|"on_add_card_to_deck"|"on_remove_from_deck"|"on_remove_card_from_deck"|"on_destroy"|"on_destroy_card"|"on_slice"|"on_slice_card"|"on_use"|"on_use_card"|"on_open"|"on_booster_open"|"on_booster_skip_click"|"on_booster_end"|"on_sell"|"on_sell_card"|"on_shop_end_click"|"on_lose"|"none")
+'''
+match_indent = true
+times = 1

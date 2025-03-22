@@ -1,0 +1,73 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+[[patches]]
+[patches.pattern]
+target = "engine/object.lua"
+pattern = "--||--"
+position = "after"
+payload = '''
+---@class ListenerConfig
+---@field listener_type ("on_trigger")?
+---@field self_type CardTypeName?
+---@field self_area CardAreaType?
+---@field other_type CardTypeName?
+---@field other_area CardAreaType?
+
+
+---@class GameEventContext
+---@field no_blueprint boolean
+---@field blueprint number|nil
+---@field blueprint_card Card
+---@field open_booster boolean
+---@field buying_card boolean
+---@field selling_self boolean
+---@field selling_card boolean
+---@field reroll_shop boolean
+---@field ending_shop boolean
+---@field skip_blind boolean
+---@field skipping_booster boolean
+---@field playing_card_added boolean
+---@field cards Card[]
+---@field first_hand_drawn boolean
+---@field setting_blind boolean
+---@field blind {boss: boolean}
+---@field destroying_card boolean
+---@field full_hand Card[]
+---@field cards_destroyed boolean
+---@field glass_shattered boolean
+---@field remove_playing_cards boolean
+---@field removed Card[]
+---@field using_consumeable boolean
+---@field consumeable Card
+---@field debuffed_hand boolean
+---@field pre_discard boolean
+---@field hook boolean
+---@field discard boolean
+---@field other_card Card
+---@field end_of_round boolean
+---@field individual boolean
+---@field repetition boolean
+---@field cardarea CardArea
+---@field card_effects unknown[]
+---@field game_over boolean
+---@field scoring_hand Card[]
+---@field other_joker Card
+---@field before boolean
+---@field poker_hands unknown
+---@field scoring_name string
+---@field after boolean
+---@field joker_main boolean
+
+---@class EventContext
+---@field SELF Object
+---@field CONTEXT GameEventContext
+---@field self EventObject
+---@field other EventObject
+
+
+'''
+match_indent = true
+times = 1

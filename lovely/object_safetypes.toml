@@ -1,0 +1,58 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+[[patches]]
+[patches.pattern]
+target = "engine/object.lua"
+pattern = "--||--"
+position = "before"
+payload = '''
+
+---Removes the leading and trailing whitespace characters from a string.
+---@param self string
+---@return string
+function string.trim(self)
+    return self:match("^%s*(.-)%s*$")
+end
+
+---comment
+---@param v any
+---@param ... any
+---@return Card
+_G.safetypecard = function(v,...)
+    assert(getmetatable(v)==Card,...)
+    return v
+end
+
+---comment
+---@param str any
+---@param ... any
+---@return string
+_G.safestr = function(str,...)
+    assert(type(str) == "string",...)
+    return str
+end
+
+
+---comment
+---@param tbl any
+---@param ... any
+---@return table
+_G.safetable = function(tbl,...)
+    assert(type(tbl) == "table",...)
+    return tbl
+end
+
+---comment
+---@param bl any
+---@param ... any
+---@return boolean
+_G.safebool = function(bl,...)
+    assert(type(bl) == "boolean",...)
+    return bl
+end
+'''
+match_indent = true
+times = 1

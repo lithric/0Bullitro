@@ -1,0 +1,169 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+[[patches]]
+[patches.pattern]
+target = "engine/object.lua"
+pattern = "--||--"
+position = "before"
+payload = '''
+---undefined literal
+_G.undefined = {}
+
+---NaN literal
+---@type number
+_G.NaN = 0/0
+
+---Infinity literal
+---@type number
+_G.Infinity = 1/0
+
+---Returns true if <code>object</code> cannot be operated with a number or if <code>object</code> is <code>NaN</code>.
+---@param object any
+---@return boolean
+_G.isNaN = function(object)
+   if getmetatable(object) == Number then
+      return object.value ~= object.value
+   else
+      return object ~= object
+   end
+end
+
+---Returns true if <code>object</code> cannot be operated with a number or if <code>object</code> is <code>WaN</code>.
+---@param object any
+---@return boolean
+_G.isWaN = function(object)
+   return getmetatable(object) == Number and object.value == WaN.value or false
+end
+
+---@type fun(e: any, base:any): number?
+local original_tonumber = tonumber
+tonumber = function(e,base)
+   local rv = original_tonumber(e,base)
+   if rv == nil and getmetatable(e) == Number then
+      if isWaN(e) then
+         return WaN
+      else
+         return e.value
+      end
+   elseif rv ~= nil then
+      return rv
+   else
+      return nil
+   end
+end
+
+local original_type = type
+type = function(obj)
+   local rv = original_type(obj)
+   if rv == "table" and getmetatable(obj) == Number then
+      return "number"
+   else
+      return rv
+   end
+end
+
+---@class Number
+---@field value number|"-wan"
+_G.Number = {}
+Number.__index = Number
+
+---A wrapper class for all numbers to allow for special values (like WaN) to exist
+---@param other any
+---@return Number?
+function Number:new(other)
+   if not other then
+      return nil
+   elseif isWaN(other) then
+      return WaN
+   elseif getmetatable(other) == Number then
+      local instance = Number:new(other.value)
+      return instance
+   elseif other == "-wan" then
+      local instance = setmetatable({},Number)
+      instance.value = "-wan"
+      return instance
+   else
+      if type(other) ~= "number" then return nil end
+      local instance = setmetatable({},Number)
+      instance.value = other
+      return instance
+   end
+end
+
+function Number:__unm()
+   if isWaN(self) then return WaN end
+   return Number:new(-tonumber(self))
+end
+
+function Number:__mod(other)
+   if isWaN(self) then return WaN end
+   if isWaN(other) then return WaN end
+   return Number:new(tonumber(self) % tonumber(other))
+end
+
+function Number:__pow(other)
+   if isWaN(self) then return WaN end
+   if isWaN(other) then return WaN end
+   return Number:new(tonumber(self) ^ tonumber(other))
+end
+
+function Number:__add(other)
+   if isWaN(self) then return WaN end
+   if isWaN(other) then return WaN end
+   return Number:new(tonumber(self) + tonumber(other))
+end
+
+function Number:__sub(other)
+   if isWaN(self) then return WaN end
+   if isWaN(other) then return WaN end
+   return Number:new(tonumber(self) - tonumber(other))
+end
+
+function Number:__mul(other)
+   if isWaN(self) then return WaN end
+   if isWaN(other) then return WaN end
+   return Number:new(tonumber(self) * tonumber(other))
+end
+
+function Number:__div(other)
+   if isWaN(self) then return WaN end
+   if isWaN(other) then return WaN end
+   return Number:new(tonumber(self) / tonumber(other))
+end
+
+function Number:__tostring()
+   if isWaN(self) then return WaN.value end
+   return tostring(tonumber(self))
+end
+
+function Number.__concat(a,b)
+   return tostring(a) .. tostring(b)
+end
+
+function Number:__eq(other)
+   if isWaN(self) then return not isNaN(other) end
+   if isWaN(other) then return not isNaN(self) end
+   return tonumber(self) == tonumber(other)
+end
+
+function Number:__lt(other)
+   if isWaN(self) then return not isNaN(other) end
+   if isWaN(other) then return not isNaN(self) end
+   return tonumber(self) < tonumber(other)
+end
+
+function Number:__le(other)
+   if isWaN(self) then return not isNaN(other) end
+   if isWaN(other) then return not isNaN(self) end
+   return tonumber(self) <= tonumber(other)
+end
+
+---Wild number literal
+---@type Number
+_G.WaN = Number:new("-wan") or error("Mistakes have been made...")
+'''
+match_indent = true
+times = 1

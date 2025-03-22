@@ -1,0 +1,54 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+[[patches]]
+[patches.pattern]
+target = "engine/event.lua"
+pattern = "--Class"
+position = "at"
+payload = '''
+
+---@class Event:Object
+---@operator call:Event'''
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/event.lua"
+pattern = "--Class Methods"
+position = "at"
+payload = '''
+
+---@class EventConfig
+---@field blockable boolean?
+---@field blocking boolean?
+---@field trigger ('immediate'|'ease'|'condition'|'after'|'before')?
+---@field start_timer boolean?
+---@field no_delete boolean?
+---@field delay number?
+---@field timer ('BACKGROUND'|'REAL'|'REAL_SHADER'|'TOTAL'|'UPTIME')?
+---@field ease ('lerp'|'elastic'|'quad')?
+---@field ease_to number?
+---@field func (fun(progress: number): boolean)?
+---@field ref_table table?
+---@field ref_value string?
+---@field stop_val any?
+---@field pause_force boolean?
+
+---@function
+---@param config EventConfig'''
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/event.lua"
+pattern = "--Class"
+position = "at"
+payload = '''
+
+---@class EventManager:Object
+---@operator call:EventManager'''
+match_indent = true
+times = 1

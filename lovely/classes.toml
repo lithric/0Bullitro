@@ -1,0 +1,165 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+[[patches]]
+[patches.pattern]
+target = "engine/object.lua"
+pattern = "--This Object implementation was taken from SNKRX (MIT license). Slightly modified, this is a very simple OOP base"
+position = "before"
+payload = '''
+---@class EventObject
+---@field object Card
+---@field applied_abilities table
+_G.EventObject = {}
+
+function EventObject:get_type()
+    return table.get(self,"object","config","center","set") and self.object.config.center.set
+end
+
+function EventObject:get_area()
+    return table.get(self,"object","area") and self.object.area
+end
+
+function EventObject:get_area_type()
+    return table.get(self,"object","area","config","type") and self.object.area.config.type
+end
+
+---comment
+---@param field AbilityNames|AbilityDataNames|"type"|"area"|"area_type"|"applied_abilities"
+function EventObject:get(field)
+    if field == "type" then
+        return table.get(self.object,"config","center","set") and self.object.config.center.set
+    elseif field == "area" then
+        return table.get(self.object,"area") and self.object.area
+    elseif field == "area_type" then
+        return table.get(self.object,"area","config","type") and self.object.area.config.type
+    else
+        return table.get(self.object,"ability","extra",field) and self.object.ability.extra[field]
+    end
+end
+
+---comment
+---@param field AbilityNames
+---@param val number|table|string
+---@param force boolean?
+function EventObject:set(field,val,force)
+    if not val then val = AbilityNames[field] or 0 end
+    if ({event_id=1,nine_tally=1,steel_tally=1,stone_tally=1,previous_odds=1,extra=1})[field] and not force then error("tried to tug deterministic value of object without force!") end
+    if self:get("applied_abilities")[field] == nil or self:get("applied_abilities")[field] == true then
+        local field_value = (self:get("applied_abilities")[field] and self:get(field)) or AbilityNames[field] or 0
+        if field == "interest_cap" then
+            G.GAME.interest_cap = (G.GAME.interest_cap - field_value) + val
+        elseif field == "interest_amount" then
+            G.GAME.interest_amount = (G.GAME.interest_amount - field_value) + val
+        elseif field == "debt_size" then
+            G.GAME.bankrupt_at = (G.GAME.bankrupt_at + field_value) - val
+        elseif field == "h_plays" then
+            G.GAME.round_resets.hands = (G.GAME.round_resets.hands - field_value) + val
+        elseif field == "d_size" then
+            G.GAME.round_resets.discards = (G.GAME.round_resets.discards - field_value) + val
+        elseif field == "h_size" then
+            print("val")
+            print(val)
+            print("field")
+            print(field_value)
+            print("self")
+            print(self:get(field))
+            G.hand:change_size(val-field_value)
+        elseif field == "odds_bonus" then
+            local previous_odds = self:get("previous_odds")
+            if not previous_odds then
+                table.set(self.object,"ability","extra","previous_odds",copy(G.GAME.probabilities))
+                previous_odds = self:get("previous_odds") or error("something went very wrong...")
+            end
+            for k,v in pairs(G.GAME.probabilities) do
+                if not previous_odds[k] then previous_odds[k] = v end
+                local initial_odds = previous_odds[k]
+                local final_odds = (initial_odds+field_value)*(self:get("odds_mult") or 1)
+                local initial_mult_effect = final_odds/initial_odds
+                local changed_odds = (initial_odds+val)*(self:get("odds_mult") or 1)
+                local changed_mult_effect = changed_odds/initial_odds
+                G.GAME.probabilities[k] = (v/initial_mult_effect)*changed_mult_effect
+            end
+        elseif field == "odds_mult" then
+            local previous_odds = self:get("previous_odds")
+            if not previous_odds then
+                table.set(self.object,"ability","extra","previous_odds",copy(G.GAME.probabilities))
+                previous_odds = self:get("previous_odds") or error("something went very wrong...")
+            end
+            for k,v in pairs(G.GAME.probabilities) do
+                if not previous_odds[k] then previous_odds[k] = v end
+                local initial_odds = previous_odds[k]
+                local final_odds = (initial_odds+(self:get("odds_bonus") or 0))*field_value
+                local initial_mult_effect = final_odds/initial_odds
+                local changed_odds = (initial_odds+(self:get("odds_bonus") or 0))*val
+                local changed_mult_effect = changed_odds/initial_odds
+                G.GAME.probabilities[k] = (v/initial_mult_effect)*changed_mult_effect
+            end
+        elseif field == "free_rerolls" then
+            G.GAME.current_round.free_rerolls = (G.GAME.current_round.free_rerolls - field_value) + val
+            calculate_reroll_cost(true)
+        end
+    end
+    table.set(self.object,"ability","extra",field,val)
+end
+
+---comment
+---@param field AbilityNames
+---@param val number?
+---@param operation_func (fun(a:number|Number,b:number|Number): number|Number)?
+---@param force boolean? allows you to force deterministic values to be changed
+function EventObject:tug(field,val,operation_func,force)
+    if operation_func == nil then operation_func = function(a,b) return a + b end end
+    local field_value = tonumber(self:get(field)) or tonumber(AbilityNames[field]) or 0
+    local new_value = operation_func(field_value,val or 0)
+    self:set(field,new_value,force)
+end
+
+---comment
+---@param field AbilityNames
+function EventObject:apply_ability(field)
+    if ({event_id=1,nine_tally=1,steel_tally=1,stone_tally=1,previous_odds=1,extra=1})[field] then return end
+    if self:get("applied_abilities")[field] == true then return end
+    self:get("applied_abilities")[field] = nil
+    self:tug(field)
+    self:get("applied_abilities")[field] = true
+end
+
+---comment
+---@param field AbilityNames
+function EventObject:resign_ability(field)
+    if ({event_id=1,nine_tally=1,steel_tally=1,stone_tally=1,previous_odds=1,extra=1})[field] then return end
+    if self:get("applied_abilities")[field] == false then return end
+    self:set(field,AbilityNames[field] or 0)
+    self:get("applied_abilities")[field] = false
+end
+
+function EventObject:apply_all_abilities()
+    for field,_ in pairs(AbilityNames) do
+        self:apply_ability(field)
+    end
+end
+
+function EventObject:resign_all_abilities()
+    for field,_ in pairs(AbilityNames) do
+        self:resign_ability(field)
+    end
+end
+
+---comment
+---@param card Card
+---@return EventObject
+function EventObject:new(card)
+    local obj = setmetatable({},EventObject)
+    obj.object = card
+    if not table.get(obj.object,"ability","extra","applied_abilities") then
+        table.set(obj.object,"ability","extra","applied_abilities",{})
+    end
+    return obj
+end
+
+'''
+match_indent = true
+times = 1

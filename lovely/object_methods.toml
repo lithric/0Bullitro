@@ -1,0 +1,111 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+[[patches]]
+[patches.pattern]
+target = "engine/object.lua"
+pattern = "--||--"
+position = "before"
+payload = '''
+
+---Evaluates falsy objects according to javascript rules.
+---@param any any
+---@return boolean
+_G.bool = function(any)
+    if not any or (any == Number:new(0) and not isWaN(any)) or (type(any)=="number" and isNaN(any)) or any == "" then return false end
+    return true
+end
+
+_G.dynamic_get = function(obj,...)
+    local args = {...}
+    return function()
+        return table.get(obj,unpack(args))
+    end
+end
+
+_G.dynamic_get_self = function(...)
+    local args = {...}
+    return function(self)
+        return table.get(self,unpack(args))
+    end
+end
+
+_G.dynamic_set = function(obj,...)
+    local args = {...}
+    return function(val)
+        table.set(obj,unpack(args),val)
+    end
+end
+
+_G.dynamic_set_self = function(...)
+    local args = {...}
+    return function(self,val)
+        table.set(self,unpack(args),val)
+    end
+end
+
+---Converts <code>object</code> into a number using javascript rules (nil is undefined).<br>
+---Returns <code>NaN</code> if <code>object</code> could not be converted into a number.
+---@param object any
+---@return number|Number|nil
+_G.numer = function(object)
+    if type(object) == "number" then return object end
+    if type(object) == "boolean" then return object and 1 or 0 end
+    if type(object) == "string" then
+        if object == "Infinity" then return Infinity end
+        if object == "-Infinity" then return -Infinity end
+        if object == "" then return 0 end
+    end
+    return tonumber(object) or NaN
+end
+
+
+_G.dump = function(o)
+    if type(o) == 'table' then
+        local s = '{ '
+        for k,v in pairs(o) do
+            if type(k) ~= 'number' then k = '"'..k..'"' end
+            s = s .. '['..k..'] = ' .. dump(v) .. ','
+        end
+        return s .. '} '
+    else
+        return tostring(o)
+    end
+end
+
+_G.copy = function(obj, seen)
+    if type(obj) ~= 'table' then return obj end
+    if seen and seen[obj] then return seen[obj] end
+    local s = seen or {}
+    local res = setmetatable({}, getmetatable(obj))
+    s[obj] = res
+    for k, v in pairs(obj) do res[copy(k, s)] = copy(v, s) end
+    return res
+end
+
+_G.wrapnumber = function(num,first_bound,second_bound)
+    local range_length = math.abs(first_bound-second_bound)+1
+    local bottom_val = math.min(first_bound,second_bound)
+    return ((num-bottom_val)%range_length)+bottom_val
+end
+
+_G.combine_return = function(base,more)
+   if type(base) ~= "table" and type(more) ~= "table" then return nil end
+   if type(base) ~= "table" then return safetable(more) end
+   if type(more) ~= "table" then return safetable(base) end
+   base = safetable(base)
+   more = safetable(more)
+   local final_return = base
+   if base.extra then
+       base.extra = safetable(base.extra)
+       final_return.extra = safetable(combine_return(base.extra,more))
+   else
+       final_return.extra = more
+   end
+   return final_return
+end
+'''
+match_indent = true
+times = 1

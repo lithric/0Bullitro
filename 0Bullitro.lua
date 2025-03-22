@@ -44,20 +44,12 @@ _G.Blind = Blind
 ---@operator call:Card_Character
 _G.Card_Character = Card_Character
 
----@class Card: Moveable
----@operator call:Card
-_G.Card = Card
-
-
----@type {extra: GameObjectData}
-Card.ability = Card.ability
-
 ---@class CardArea: Moveable
 ---@operator call:CardArea
 _G.CardArea = CardArea
 
 ---@type Object[]
-_G.EVENT_FUNCTIONS = {}
+_G.EVENT_LISTENERS = {}
 
 --------------------------------------------------------------------------------------------------------------------------
 -- Decoder of GIF-files (not made by me)
@@ -910,27 +902,67 @@ function get_X_same(amount_wanted, selected_cards, or_more)
 end
 
 ---@class EventQuery
----@field event_id string?
+---@field event_id string? the id of this event in the global event listeners table
+---@field message string? the message to display for when this event is executed
+---@field func string? the name of an event listener function in the global event listeners table to call when this event is executed
+---@field swap boolean? whether to swap the chips and mult when this event is executed
+---@field level_up number? the amount of times to level up the last played poker hand
+---@field saved number? no idea what this does
 ---@field chips number? chips given
----@field bonus number? alias for chips
 ---@field chip_mod number? chips to change by for effect
+---@field bonus number? alias for chips
+---@field __GET_SET__bonus unknown?
 ---@field s_chips number? suit chips
+---@field s_chip_mod number? suit chips to change by for effect
 ---@field t_chips number? poker hand chips
+---@field t_chip_mod number? poker hand chips to change by for effect
+---@field h_chips number? chips while in hand
+---@field h_chip_mod number? chips while in hand to change by for effect
 ---@field x_chips number? chips multiplier
----@field Xchip_mod number? chip mult to change by for effect
+---@field x_chip_mod number? chip mult to change by for effect
+---@field xchips number? alias for x_chips
+---@field __GET_SET__xchips unknown?
+---@field xchip_mod number? alias for x_chip_mod
+---@field __GET_SET__xchip_mod unknown?
+---@field Xchips number? alias for x_chips
+---@field __GET_SET__Xchips unknown?
+---@field Xchip_mod number? alias for x_chip_mod
+---@field __GET_SET__Xchip_mod unknown?
+---@field s_x_chips number? suit chips multiplier
+---@field s_x_chip_mod number? suit chips multiplier to change by for effect
+---@field t_x_chips number? poker hand chips multiplier
+---@field t_x_chip_mod number? poker hand chips multiplier to change by for effect
+---@field h_x_chips number? chips multiplier while in hand
+---@field h_x_chip_mod number? chips multiplier while in hand to change by for effect
 ---@field mult number? mult given
----@field s_mult number? suit multiplier
----@field suit CardSuitName? target suit
----@field t_mult number? poker hand multiplier
----@field type (PokerHandName|TagEffectTimingName|"")? target poker hand
 ---@field mult_mod number? mult to change by for effect
+---@field s_mult number? suit multiplier
+---@field s_mult_mod number? suit multiplier to change by for effect
+---@field t_mult number? poker hand multiplier
+---@field t_mult_mod number? poker hand multiplier to change by for effect
+---@field h_mult number? mult while in hand
+---@field h_mult_mod number? mult while in hand to change by for effect
 ---@field x_mult number? mult multiplier
----@field h_x_mult number? mult multiplier if held in hand
+---@field x_mult_mod number? mult multiplier to change by for effect
+---@field xmult number? alias for x_mult
+---@field __GET_SET__xmult unknown?
+---@field xmult_mod number? alias for x_mult_mod
+---@field __GET_SET__xmult_mod unknown?
 ---@field Xmult number? alias for x_mult
----@field Xmult_mod number? mult multiplier to change by for effect
+---@field __GET_SET__Xmult unknown?
+---@field Xmult_mod number? alias for x_mult_mod
+---@field __GET_SET__Xmult_mod unknown?
+---@field s_x_mult number? suit mult multiplier
+---@field s_x_mult_mod number? suit mult multiplier to change by for effect
+---@field t_x_mult number? poker hand mult multiplier
+---@field t_x_mult_mod number? poker hand mult multiplier to change by for effect
+---@field h_x_mult number? mult multiplier while in hand
+---@field h_x_mult_mod number? mult multiplier while in hand to change by for effect
+---@field suit CardSuitName? target suit
+---@field type (PokerHandName|TagEffectTimingName|"")? target poker hand
 ---@field dollars number? round bonus given
----@field h_dollars number? round bonus if held in hand
----@field p_dollars number? extra money if played
+---@field h_dollars number? bonus money if held in hand
+---@field p_dollars number? bonus money when played
 ---@field interest_cap number? extra interest cap
 ---@field interest_gain number? extra interest gain
 ---@field interest_amount number? extra interest per interest
@@ -938,13 +970,15 @@ end
 ---@field h_plays number? extra hand plays
 ---@field d_size number? extra discards (not my choice of name btw)
 ---@field h_size number? extra hand size
+---@field hand_size number? alias for h_size
+---@field __GET_SET__hand_size unknown?
 ---@field h_mod number? extra hand size value for some effect
 ---@field odds_bonus number? extra odds
 ---@field odds_mult number? odds multiplier
 ---@field free_rerolls number? extra free rerolls
 ---@field d_remaining number? discards remaining
 ---@field size number? hand size restriction for effect
----@field every number? every other count
+---@field every number? every other count for this effect to trigger
 ---@field remaining string? text for amount remaining for every other trigger
 ---@field max number? max value for effect
 ---@field min number? min value for effect
@@ -953,10 +987,10 @@ end
 ---@field no_pool_flag string? flag to remove something from a pool
 ---@field yes_pool_flag string? flag to add something to a pool
 ---@field faces number? number of face cards restriction
----@field hand_add number? number to add for hand played
----@field discard_sub number? number to subtract for hand discarded
+---@field hand_add number? number of *blank* to add for hand played (*blank* can be mult, x_mult, chips, etc.)
+---@field discard_sub number? number of *blank* subtract for hand discarded (*blank* can be mult, x_mult, chips, etc.)
 ---@field poker_hand PokerHandName? poker hand restriction for effect
----@field increase number? amount to increase for unspecified effect
+---@field increase number? amount to increase *blank* when effect is executed (*blank* can be mult, x_mult, chips, etc.)
 ---@field discards number? discards restriction for unspecified effect
 ---@field hands number? hands restriction for unspecified effect
 ---@field mod_conv CardEnhancementName? convert string for some enhancement for the cards of an unspecified effect
@@ -979,26 +1013,20 @@ end
 ---@field consumeable ConsumeableName? extra consumeable
 ---@field consumeables ConsumeableName[]? multiple extra consumeables
 ---@field spectral_rate number? rate of spectral cards
----@field remove_faces boolean? whether to remove the face cards in the deck
----@field hand_size number? extra hand size
+---@field remove_faces boolean? whether to remove all face cards from the deck when this event is executed
 ---@field ante_scaling number? the ante scaling factor
----@field randomize_rank_suit boolean? whether to randomize the ranks and suits of the deck
+---@field randomize_rank_suit boolean? whether to randomize the ranks and suits of all cards in the deck when this event is executed
 ---@field extra (EventQuery|number|CardSealName)?
 ---@field spawn_jokers number? number of jokers to spawn
 ---@field skip_bonus number? bonus money for skipped blinds
 ---@field levels number? number of levels to upgrade for effect
 ---@field choose number? number of choices for booster pack effect
+---@field forced_selection boolean? whether this event causes the object to be forced to be highlighted
+---@field perma_bonus number? the amount of permanent bonus on object
 ---@field new (fun(self:self,eventId:string,recurse:number?):EventQuery)?
 ---@field __call (fun(self:self):EventQuery)?
 ---@field __index unknown?
 ---@field __newindex unknown?
----@field __GET_SET__Xmult unknown?
----@field __GET_SET__xmult unknown?
----@field __GET_SET__x_mult_mod unknown?
----@field __GET_SET__Xchips unknown?
----@field __GET_SET__xchips unknown?
----@field __GET_SET__x_chip_mod unknown?
----@field __GET_SET__bonus unknown?
 ---@operator call:EventQuery
 _G.EventQuery = {}
 
@@ -1008,30 +1036,14 @@ _G.EventQuery = {}
 ---@return EventQuery
 function EventQuery:new(eventId,recurse)
    if not recurse then recurse = 1 end
-   local eventNumber = #EVENT_FUNCTIONS
-   if EVENT_FUNCTIONS[eventId or eventNumber] ~= nil then eventId = nil end
+   local eventNumber = #EVENT_LISTENERS
+   if EVENT_LISTENERS[eventId or eventNumber] ~= nil then eventId = nil end
    local obj = setmetatable({},EventQuery)
-   obj.event_id = eventId or (""..eventNumber)
-   obj.chips = 0
-   obj.chip_mod = 0
-   obj.x_chips = 1
-   obj.Xchip_mod = 0
-   obj.mult = 0
-   obj.mult_mod = 0
-   obj.x_mult = 1
-   obj.Xmult_mod = 0
-   obj.dollars = 0
-   obj.interest_cap = 0
-   obj.interest_gain = 0
-   obj.interest_amount = 0
-   obj.debt_size = 0
-   obj.h_plays = 0
-   obj.d_size = 0
-   obj.h_size = 0
-   obj.odds_bonus = 0
-   obj.odds_mult = 1
-   obj.free_rerolls = 0
-   EVENT_FUNCTIONS[eventId or eventNumber] = Object:extend()
+   obj.event_id = eventId or tostring(eventNumber)
+   for k,v in pairs(AbilityNames) do
+      obj[k] = v
+   end
+   EVENT_LISTENERS[obj.event_id] = Object:extend()
    obj.extra = recurse > 0 and EventQuery:new(obj.event_id..(recurse-1),recurse-1) or {}
    return obj
 end
@@ -1069,19 +1081,9 @@ function EventQuery:__newindex(index,value)
    end
 end
 
-function EventQuery:__GET_SET__Xmult(val)
-   if val ~= undefined then self.x_mult = val end
-   return self.x_mult
-end
-
-function EventQuery:__GET_SET__xmult(val)
-   if val ~= undefined then self.x_mult = val end
-   return self.x_mult
-end
-
-function EventQuery:__GET_SET__x_mult_mod(val)
-   if val ~= undefined then self.Xmult_mod = val end
-   return self.Xmult_mod
+function EventQuery:__GET_SET__bonus(val)
+   if val ~= undefined then self.chips = val end
+   return self.chips
 end
 
 function EventQuery:__GET_SET__xchips(val)
@@ -1089,19 +1091,44 @@ function EventQuery:__GET_SET__xchips(val)
    return self.x_chips
 end
 
+function EventQuery:__GET_SET__xchip_mod(val)
+   if val ~= undefined then self.x_chip_mod = val end
+   return self.x_chip_mod
+end
+
 function EventQuery:__GET_SET__Xchips(val)
    if val ~= undefined then self.x_chips = val end
    return self.x_chips
 end
 
-function EventQuery:__GET_SET__x_chip_mod(val)
-   if val ~= undefined then self.Xchip_mod = val end
-   return self.Xchip_mod
+function EventQuery:__GET_SET__Xchip_mod(val)
+   if val ~= undefined then self.x_chip_mod = val end
+   return self.x_chip_mod
 end
 
-function EventQuery:__GET_SET__bonus(val)
-   if val ~= undefined then self.chips = val end
-   return self.chips
+function EventQuery:__GET_SET__xmult(val)
+   if val ~= undefined then self.x_mult = val end
+   return self.x_mult
+end
+
+function EventQuery:__GET_SET__xmult_mod(val)
+   if val ~= undefined then self.x_mult_mod = val end
+   return self.x_mult_mod
+end
+
+function EventQuery:__GET_SET__Xmult(val)
+   if val ~= undefined then self.x_mult = val end
+   return self.x_mult
+end
+
+function EventQuery:__GET_SET__Xmult_mod(val)
+   if val ~= undefined then self.x_mult_mod = val end
+   return self.x_mult_mod
+end
+
+function EventQuery:__GET_SET__hand_size(val)
+   if val ~= undefined then self.h_size = val end
+   return self.h_size
 end
 
 ---@class GameObjectData: EventQuery
@@ -1517,31 +1544,38 @@ function JokerObject:setup()
           return true
       end
   end
-   self:addEventListener("on_jokers",nil,function(eventObject)
-      local card = eventObject.self.object
+   self:addEventListener("on_joker",function(eventObject)
+      local card = eventObject.self
       return {
-         mult = card.ability.extra.mult,
-         x_mult = card.ability.extra.x_mult,
-         chips = card.ability.extra.chips,
-         x_chips = card.ability.extra.x_chips,
+         mult = card:get("mult"),
+         x_mult = card:get("x_mult"),
+         chips = card:get("chips"),
+         x_chips = card:get("x_chips"),
       }
    end)
-   self:addEventListener("on_round_bonus",nil,function(eventObject)
-      local card = eventObject.self.object
-      return card.ability.extra.dollars + math.max(math.min(
-            (G.GAME.dollars/5)*card.ability.extra.interest_gain*G.GAME.interest_amount,
+   self:addEventListener("on_score_card",function(eventObject)
+      local card = eventObject.self
+      local other = eventObject.other
+      return {
+         mult = card:get("s_mult")
+      }
+   end)
+   self:addEventListener("on_round_bonus",function(eventObject)
+      local card = eventObject.self
+      return card:get("dollars") + math.max(math.min(
+            (G.GAME.dollars/5)*card:get("interest_gain")*G.GAME.interest_amount,
             (G.GAME.interest_cap/5)*G.GAME.interest_amount
             ),
             0
       )
    end)
-   self:addEventListener("on_add_to_deck",nil,function(eventObject)
+   self:addEventListener("on_add_to_deck",function(eventObject)
       local card = eventObject.self
-      card.apply_all_abilities()
+      card:apply_all_abilities()
    end)
-   self:addEventListener("on_remove_from_deck",nil,function(eventObject)
+   self:addEventListener("on_remove_from_deck",function(eventObject)
       local card = eventObject.self
-      card.resign_all_abilities()
+      card:resign_all_abilities()
    end)
    self.installed = true
 end
@@ -1690,7 +1724,6 @@ JokerObject.addEventListener = Object.addEventListener
 ---Phases Of Round:
 ---Blind Phase
 ---
-
 JokerObject:new("Joker",[[
 Original Text:
 {C:mult}+#mult#{} Mult
@@ -1699,96 +1732,92 @@ Bullitro Valid Alt Texts:
 1. {C:mult}+#mult#{} Mult
 ]]):set_attributes({mult=4}):override()
 
--- JokerObject:new("Greedy Joker",[[
--- Original Text:
--- Played cards with
--- {C:diamonds}Diamond{} suit give
--- {C:mult}+#extra.mult#{} Mult when scored
--- -
--- Bullitro Valid Alt Texts:
--- 1. Whenever a {C:diamonds}Diamond{}
--- {C:blue}Playing Card{} is {C:green}scored{},
--- {C:attention}Greedy Joker{} gives {C:mult}+#extra.mult#{} Mult
--- ]]):set_attributes({extra={mult=3}}):override()
+JokerObject:new("Greedy Joker",[[
+Original Text:
+Played cards with
+{C:diamonds}Diamond{} suit give
+{C:mult}+#extra.mult#{} Mult when scored
+-
+Bullitro Valid Alt Texts:
+1. Whenever a {C:diamonds}Diamond{}
+{C:blue}Playing Card{} is {C:green}scored{},
+{C:attention}Greedy Joker{} gives {C:mult}+#s_mult#{} Mult
+]]):set_attributes({s_mult=3,suit="Diamonds"}):override()
 
--- JokerObject:new("Jolly Joker",[[
--- Original Text:
--- {C:mult}+8{} Mult if played
--- hand contains
--- a {C:attention}Pair{}
--- -
--- Bullitro Valid Alt Texts:
--- 1. {C:attention}>=Pair{}: {C:mult}+#extra.mult#{} Mult
--- ]]):set_attributes({extra={mult=8}}):override("Jolly")
-
+JokerObject:new("Jolly Joker",[[
+Original Text:
+{C:mult}+8{} Mult if played
+hand contains
+a {C:attention}Pair{}
+-
+Bullitro Valid Alt Texts:
+1. {C:attention}>=Pair{}: {C:mult}+#extra.mult#{} Mult
+]]):set_attributes({t_mult=8,type="Pair"}):override("Jolly")
 
 
 local bean = JokerObject:new("bean",[[
 this is a bean #h_size#
 ]])
-bean:addEventListener("on_round_end",nil,function(eventObject)
+:set_attributes({h_size = 5})
+bean:addEventListener("on_round_end",function(eventObject)
    local card = eventObject.self
-   card.tug("h_size",-1)
-   if (card.get("h_size") <= 0) then
+   card:tug("h_size",-1)
+   if (card:get("h_size") <= 0) then
       card.object:start_dissolve()
    end
 end)
-bean:set_attributes({h_size = 5})
 bean.in_pool = false
 bean:register()
 
 local ice_cream = JokerObject:new("ice cream",[[
 this is a ice cream #chips#
-]])
-ice_cream:addEventListener("on_jokers_end",nil,function(eventObject)
+]]):set_attributes({chips = 100})
+ice_cream:addEventListener("on_play_discard_end",function(eventObject)
    local card = eventObject.self
-   card.tug("chips",-5)
-   if (card.get("chips") <= 0) then
+   card:tug("chips",-5)
+   if (card:get("chips") <= 0) then
       card.object:start_dissolve()
    end
 end)
-ice_cream:set_attributes({chips = 100})
 ice_cream.in_pool = false
 ice_cream:register()
 
 local popcorn = JokerObject:new("popcorn",[[
 this is a popcorn #mult#
-]])
-popcorn:addEventListener("on_jokers_end",nil,function(eventObject)
+]]):set_attributes({mult = 20})
+popcorn:addEventListener("on_play_discard_end",function(eventObject)
    local card = eventObject.self
-   card.tug("mult",-4)
-   if (card.get("mult") <= 0) then
+   card:tug("mult",-4)
+   if (card:get("mult") <= 0) then
       card.object:start_dissolve()
    end
 end)
-popcorn:set_attributes({mult = 20})
 popcorn.in_pool = false
 popcorn:register()
 
 local ramen = JokerObject:new("ramen",[[
 this is a ramen #x_mult#
-]])
-ramen:addEventListener("on_discard_card",{other_type = "any",other_area = "any"},function(eventObject)
+]]):set_attributes({x_mult = 2})
+ramen:addEventListener("on_discard_card",function(eventObject)
    local card = eventObject.self
-   card.tug("x_mult",-0.01)
-   if (card.get("x_mult") <= 1) then
+   card:tug("x_mult",-0.01)
+   if (card:get("x_mult") <= 1) then
       card.object:start_dissolve()
    end
 end)
-ramen:set_attributes({x_mult = 2})
 ramen.in_pool = false
 ramen:register()
 
 local green_guy = JokerObject:new("green guy",[[
 this is a green guy #mult#
 ]])
-green_guy:addEventListener("on_play_click",nil,function(eventObject)
+green_guy:addEventListener("on_play_end",function(eventObject)
    local card = eventObject.self
-   card.tug("mult",1)
+   card:tug("mult",1)
 end)
-green_guy:addEventListener("on_discard_click",nil,function(eventObject)
+green_guy:addEventListener("on_discard_click",function(eventObject)
    local card = eventObject.self
-   card.tug("mult",-1)
+   card:tug("mult",-1)
 end)
 green_guy.in_pool = false
 green_guy:register()

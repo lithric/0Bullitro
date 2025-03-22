@@ -1,0 +1,108 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+# adding for annotations
+
+# top level
+[[patches]]
+[patches.pattern]
+target = "card_character.lua"
+pattern = "ϖ"
+position = "at"
+payload = "ϖ"
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "challenges.lua"
+pattern = "ϖ"
+position = "at"
+payload = "ϖ"
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "challenges.lua"
+pattern = "ϖ"
+position = "at"
+payload = "ϖ"
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "conf.lua"
+pattern = "ϖ"
+position = "at"
+payload = "ϖ"
+match_indent = true
+times = 1
+
+# engine
+[[patches]]
+[patches.pattern]
+target = "engine/event.lua"
+pattern = "ϖ"
+position = "at"
+payload = "ϖ"
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/http_manager.lua"
+pattern = "ϖ"
+position = "at"
+payload = "ϖ"
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/node.lua"
+pattern = "ϖ"
+position = "at"
+payload = "ϖ"
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/object.lua"
+pattern = "ϖ"
+position = "at"
+payload = "ϖ"
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/particles.lua"
+pattern = "ϖ"
+position = "at"
+payload = "ϖ"
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/profile.lua"
+pattern = "ϖ"
+position = "at"
+payload = "ϖ"
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/string_packer.lua"
+pattern = "ϖ"
+position = "at"
+payload = "ϖ"
+match_indent = true
+times = 1
+
+# functions
+[[patches]]
+[patches.pattern]
+target = "functions/test_functions.lua"
+pattern = "ϖ"
+position = "at"
+payload = "ϖ"
+match_indent = true
+times = 1

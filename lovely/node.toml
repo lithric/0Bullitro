@@ -1,0 +1,40 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+[[patches]]
+[patches.pattern]
+target = "engine/node.lua"
+pattern = "---@class Node"
+position = "at"
+payload = '''
+
+---@alias Transform2D {x:number|0,y:number|0,w:number|1,h:number|1,r:number|0,scale:number|1}
+---@alias ChildNodes {d_popup: UIBox,h_popup: UIBox, alert: UIBox,rest...:Node}
+
+---@class NodeConfig
+---@field d_popup UIBoxDefinition
+---@field d_popup_config UIBoxConfig
+---@field h_popup UIBoxDefinition
+---@field h_popup_config UIBoxConfig
+
+---@class Node: Object
+---@field T Transform2D
+---@field CT Transform2D
+---@field VT Transform2D?
+---@field DEBUG_VALUE string?
+---@field CALCING boolean?
+---@field config NodeConfig
+---@field children ChildNodes
+---@operator call:Node'''
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/node.lua"
+pattern = "---@param args {T: table, container: Node}"
+position = "at"
+payload = '''---@param args {T: [number?,number?,number?,number?,number?,number?]|{x:number?,y:number?,w:number?,h:number?,r:number?,scale:number?}, container: Node}'''
+match_indent = true
+times = 1

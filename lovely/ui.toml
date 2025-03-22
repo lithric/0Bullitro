@@ -1,0 +1,51 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+[[patches]]
+[patches.pattern]
+target = "engine/ui.lua"
+pattern = "--Class"
+position = "at"
+payload = '''
+
+---@class UIBox: Moveable
+---@operator call:UIBox'''
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/ui.lua"
+pattern = "---@param args {T: table, definition: table, config: table}"
+position = "at"
+payload = "---@param args UIBox|Moveable"
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/ui.lua"
+pattern = "--Class"
+position = "at"
+payload = '''
+
+---@alias UITransform {Root:any,T:any,O:any,B:any,C:any,R:any}
+---@class UIElement: Moveable
+---@field parent UIElement
+---@operator call:UIElement'''
+match_indent = true
+times = 1
+[[patches]]
+[patches.pattern]
+target = "engine/ui.lua"
+pattern = "--Class Methods"
+position = "at"
+payload = '''
+
+---@function
+---@param parent (UIElement|UIBox)
+---@param new_UIBox UIBox
+---@param new_UIT UITransform
+---@param config table'''
+match_indent = true
+times = 1
