@@ -141,6 +141,12 @@ function Object:addEventListener(eventName,listener,options)
                 local gotEventData = eventData(_self,card,context)
                 if solvepredicate(cond_func)(gotEventData) then
                     second = listener(gotEventData)
+                    local ability = gotEventData.self.object.ability
+                    while gotEventData.self:has_extra() do
+                        gotEventData.self.object.ability = gotEventData.self.object.ability.extra --[[@as EventQuery]]
+                        second = combine_func(second,listener(gotEventData))
+                    end
+                    gotEventData.self.object.ability = ability
                 end
                 return combine_func(first,second)
             end

@@ -1516,6 +1516,16 @@ function JokerObject:setup()
          x_chips = card:get("x_chips"),
       }
    end)
+   self:addEventListener("on_joker",function(eventObject)
+      local card = eventObject.self
+      local context = eventObject.CONTEXT
+      return {
+         mult = context.scoring_name == card:get("type") and card:get("t_mult") or nil,
+         x_mult = context.scoring_name == card:get("type") and card:get("t_x_mult") or nil,
+         chips = context.scoring_name == card:get("type") and card:get("t_chips") or nil,
+         x_chips = context.scoring_name == card:get("type") and card:get("t_x_chips") or nil,
+      }
+   end)
    self:addEventListener("on_score_card",function(eventObject)
       local card = eventObject.self
       local other = eventObject.other
@@ -1523,17 +1533,30 @@ function JokerObject:setup()
          mult = other.object:is_suit(card:get("suit")) and card:get("s_mult") or nil,
          x_mult = other.object:is_suit(card:get("suit")) and card:get("s_x_mult") or nil,
          chips = other.object:is_suit(card:get("suit")) and card:get("s_chips") or nil,
-         x_chips = other.object:is_suit(card:get("suit")) and card:get("s_x_chips") or nil
+         x_chips = other.object:is_suit(card:get("suit")) and card:get("s_x_chips") or nil,
+      }
+   end)
+   self:addEventListener("on_score_card",function(eventObject)
+      local card = eventObject.self
+      local other = eventObject.other
+      local target_rank = ({Ace=14,King=13,Queen=12,Jack=11})[card:get("rank")] or tonumber(card:get("rank"))
+      if not target_rank then return nil end
+      return {
+         mult = other.object:get_id() == target_rank and card:get("r_mult") or nil,
+         x_mult = other.object:get_id() == target_rank and card:get("r_x_mult") or nil,
+         chips = other.object:get_id() == target_rank and card:get("r_chips") or nil,
+         x_chips = other.object:get_id() == target_rank and card:get("r_x_chips") or nil
       }
    end)
    self:addEventListener("on_round_bonus",function(eventObject)
       local card = eventObject.self
-      return card:get("dollars") + math.max(math.min(
+      local bonus = card:get("dollars") + math.max(math.min(
             (G.GAME.dollars/5)*card:get("interest_gain")*G.GAME.interest_amount,
             (G.GAME.interest_cap/5)*G.GAME.interest_amount
             ),
             0
       )
+      return bonus ~= 0 and bonus or nil
    end)
    self:addEventListener("on_add_to_deck",function(eventObject)
       local card = eventObject.self

@@ -27,7 +27,7 @@ function EventObject:get_area_type()
 end
 
 ---comment
----@param field AbilityName|AbilityDataName|"type"|"area"|"area_type"|"applied_abilities"
+---@param field AbilityName|AbilityDataName|"type"|"area"|"area_type"|"applied_abilities"|"extra"
 function EventObject:get(field)
     if field == "type" then
         return table.get(self.object,"config","center","set") and self.object.config.center.set
@@ -146,6 +146,10 @@ function EventObject:resign_all_abilities()
     for field,_ in pairs(AbilityNames) do
         self:resign_ability(field)
     end
+end
+
+function EventObject:has_extra()
+    return table.get(self.object,"ability","extra","extra") and true or false
 end
 
 ---comment
