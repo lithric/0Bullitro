@@ -65,7 +65,7 @@ _G.EVENT_LISTENERS = {}
 --       returns two integers (width and height are the properties of the whole file)
 --    get_file_parameters()
 --       returns table with the following fields (these are the properties of the whole file)
---          comment           -- text coment inside gif-file
+--          comment           -- text comment inside gif-file
 --          looped            -- boolean
 --          number_of_images  -- == 1 for non-animated gifs, > 1 for animated gifs
 --    get_image_parameters()
@@ -774,7 +774,7 @@ table.implement(math,{
    }
 })
 
-function get_X_same(amount_wanted, selected_cards, or_more)
+_G.get_X_same = function(amount_wanted, selected_cards, or_more)
    local matching_ranks_list = {}
    amount_wanted = (Number and Number:new(amount_wanted) or (amount_wanted))
    for i = 1, SMODS.Rank.max_id.value do
@@ -815,7 +815,7 @@ function get_X_same(amount_wanted, selected_cards, or_more)
    return ret
  end
 
- function get_straight(hand)
+ _G.get_straight = function(hand)
 	local ret = {}
 	local four_fingers = next(SMODS.find_card('j_four_fingers'))
 	local can_skip = next(SMODS.find_card('j_shortcut'))
@@ -955,6 +955,7 @@ end
 ---@field h_x_mult number? mult multiplier while in hand
 ---@field h_x_mult_mod number? mult multiplier while in hand to change by for effect
 ---@field suit CardSuitName? target suit
+---@field rank CardRankName? target rank
 ---@field type (PokerHandName|TagEffectTimingName|"")? target poker hand
 ---@field dollars number? round bonus given
 ---@field h_dollars number? bonus money if held in hand
@@ -1004,8 +1005,8 @@ end
 ---@field no_interest boolean? whether interest is on or off
 ---@field joker_slot number? amount of extra joker slots
 ---@field consumeable_slot number? amount of extra consumeable slots
----@field voucher VoucherName? extra voucher
----@field vouchers VoucherName[]? multiple extra vouchers
+---@field voucher CardVoucherName? extra voucher
+---@field vouchers CardVoucherName[]? multiple extra vouchers
 ---@field consumeable ConsumeableName? extra consumeable
 ---@field consumeables ConsumeableName[]? multiple extra consumeables
 ---@field spectral_rate number? rate of spectral cards
@@ -1144,8 +1145,7 @@ _G.GameObjectData = {}
 ---comment
 ---@return GameObjectData
 function GameObjectData:new()
-   ---@type GameObjectData
-   local obj = EventQuery:new()
+   local obj = EventQuery:new() --[[@as GameObjectData]]
    setmetatable(obj,GameObjectData)
    obj.previous_odds = nil
    obj.discards_since_create = 0
@@ -1553,7 +1553,10 @@ function JokerObject:setup()
       local card = eventObject.self
       local other = eventObject.other
       return {
-         mult = card:get("s_mult")
+         mult = other.object:is_suit(card:get("suit")) and card:get("s_mult") or nil,
+         x_mult = other.object:is_suit(card:get("suit")) and card:get("s_x_mult") or nil,
+         chips = other.object:is_suit(card:get("suit")) and card:get("s_chips") or nil,
+         x_chips = other.object:is_suit(card:get("suit")) and card:get("s_x_chips") or nil
       }
    end)
    self:addEventListener("on_round_bonus",function(eventObject)
@@ -1708,46 +1711,20 @@ function JokerObject:solve_name()
 end
 JokerObject.addEventListener = Object.addEventListener
 
----Magic Phases:
----Untap
----Upkeep
----Draw
----First Main Phase
----Combat Phase
----Second Main Phase
----Ending Phase
-
----Phases Of Round:
----Blind Phase
----
 JokerObject:new("Joker",[[
-Original Text:
 {C:mult}+#mult#{} Mult
--
-Bullitro Valid Alt Texts:
-1. {C:mult}+#mult#{} Mult
 ]]):set_attributes({mult=4}):override()
 
 JokerObject:new("Greedy Joker",[[
-Original Text:
 Played cards with
-{C:diamonds}Diamond{} suit give
-{C:mult}+#extra.mult#{} Mult when scored
--
-Bullitro Valid Alt Texts:
-1. Whenever a {C:diamonds}Diamond{}
-{C:blue}Playing Card{} is {C:green}scored{},
-{C:attention}Greedy Joker{} gives {C:mult}+#s_mult#{} Mult
+{C:diamonds}#suit#{} suit give
+{C:mult}+#s_mult#{} Mult when scored
 ]]):set_attributes({s_mult=3,suit="Diamonds"}):override()
 
 JokerObject:new("Jolly Joker",[[
-Original Text:
-{C:mult}+8{} Mult if played
+{C:mult}+#t_mult#{} Mult if played
 hand contains
-a {C:attention}Pair{}
--
-Bullitro Valid Alt Texts:
-1. {C:attention}>=Pair{}: {C:mult}+#extra.mult#{} Mult
+a {C:attention}#type#{}
 ]]):set_attributes({t_mult=8,type="Pair"}):override("Jolly")
 
 
