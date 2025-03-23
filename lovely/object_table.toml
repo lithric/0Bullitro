@@ -15,6 +15,8 @@ payload = '''
 
 ---@alias PredicateParameter<T1,T2,T3,T4,T5,T6,T7,T8,T9,T10> nil|boolean|PredicateFunction<T1,T2,T3,T4,T5,T6,T7,T8,T9,T10>|{[integer]:PredicateParameter<T1,T2,T3,T4,T5,T6,T7,T8,T9,T10>,match:"and"|"or"}|table|number|string
 
+---@alias PredicateParameterTableIterator<T1,T2,T3> nil|boolean|fun(c1?:T1,c2?:T2,c3?:integer,c4?:T3):boolean|{[integer]:PredicateParameterTableIterator<T1,T2,T3>,match:"and"|"or"}|table|number|string
+
 ---@generic T1,T2,T3,T4,T5,T6,T7,T8,T9,T10
 ---@param pred PredicateParameter<T1,T2,T3,T4,T5,T6,T7,T8,T9,T10>
 ---@return PredicateFunction<T1,T2,T3,T4,T5,T6,T7,T8,T9,T10>
@@ -45,16 +47,18 @@ function table.some(tbl,pred)
 end
 
 ---Returns true if some value inside the table matched the predicate.
----@generic T1,T2,T3,T4,T5,T6,T7,T8,T9,T10
+---@generic T1,T2,T3
 ---@param tbl {[T2]:T1}|T3
----@param pred PredicateParameter<T1,T2,T3,T4,T5,T6,T7,T8,T9,T10>
+---@param pred PredicateParameterTableIterator<T1,T2,T3>
 ---@return boolean
 function table.ksome(tbl,pred)
     pred = solvepredicate(pred)
+    local i = 1
     for k,v in pairs(tbl) do
-        if pred(v,k,tbl) then
+        if pred(v,k,i,tbl) then
             return true
         end
+        i = i + 1
     end
     return false
 end
@@ -75,16 +79,18 @@ function table.every(tbl,pred)
 end
 
 ---Returns true if every value inside the list matched the predicate.
----@generic T1,T2,T3,T4,T5,T6,T7,T8,T9,T10
+---@generic T1,T2,T3
 ---@param tbl {[T2]:T1}|T3
----@param pred PredicateParameter<T1,T2,T3,T4,T5,T6,T7,T8,T9,T10>
+---@param pred PredicateParameterTableIterator<T1,T2,T3>
 ---@return boolean
 function table.kevery(tbl,pred)
     pred = solvepredicate(pred)
+    local i = 1
     for k,v in pairs(tbl) do
-        if not pred(v,k,tbl) then
+        if not pred(v,k,i,tbl) then
             return false
         end
+        i = i + 1
     end
     return true
  end
@@ -207,17 +213,19 @@ function table.count(tbl,pred)
 end
 
 ---Returns the amount of entries in the list that matched the filter.
----@generic T1,T2,T3,T4,T5,T6,T7,T8,T9,T10
+---@generic T1,T2,T3
 ---@param tbl {[T2]:T1}|T3
----@param pred PredicateParameter<T1,T2,T3,T4,T5,T6,T7,T8,T9,T10>
+---@param pred PredicateParameterTableIterator<T1,T2,T3>
 ---@return integer
 function table.kcount(tbl,pred)
     pred = solvepredicate(pred)
     local count = 0
+    local i = 1
     for k,v in pairs(tbl) do
-        if pred(v,k,tbl) then
+        if pred(v,k,i,tbl) then
             count = count + 1
         end
+        i = i + 1
     end
     return count
 end
@@ -239,17 +247,19 @@ function table.filter(tbl,pred)
 end
 
 ---Returns a new list with all the entries of the list that passed the filter.
----@generic T1,T2,T3,T4,T5,T6,T7,T8,T9,T10
+---@generic T1,T2,T3
 ---@param tbl {[T2]:T1}|T3
----@param pred PredicateParameter<T1,T2,T3,T4,T5,T6,T7,T8,T9,T10>
+---@param pred PredicateParameterTableIterator<T1,T2,T3>
 ---@return T3
 function table.kfilter(tbl,pred)
     local rv = {}
+    local i = 1
     pred = solvepredicate(pred)
     for k,v in pairs(tbl) do
-        if pred(v,k,tbl) then
+        if pred(v,k,i,tbl) then
             table.insert(rv,v)
         end
+        i = i+1
     end
     return rv
 end
@@ -271,17 +281,19 @@ function table.sum(tbl,pred)
 end
 
 ---Returns the sum of all the values inside the list.
----@generic T1,T2,T3,T4,T5,T6,T7,T8,T9,T10
+---@generic T1,T2,T3
 ---@param tbl {[T2]:T1}|T3
----@param pred PredicateParameter<T1,T2,T3,T4,T5,T6,T7,T8,T9,T10>
+---@param pred PredicateParameterTableIterator<T1,T2,T3>
 ---@return number
 function table.ksum(tbl,pred)
     local sum = 0
     pred = solvepredicate(pred)
+    local i = 1
     for k,v in pairs(tbl) do
-        if pred(v,k,tbl) then
+        if pred(v,k,i,tbl) then
             sum = sum + numer(v)
         end
+        i = i + 1
     end
     return sum
 end
@@ -302,12 +314,14 @@ end
 ---Returns a new table with each value mapped with the mapping function.
 ---@generic T1,T2,T3,T4,T5,T6,T7,T8,T9,T10
 ---@param tbl {[T2]:T1}|T3
----@param func fun(value:T1,key:T2,table:T3):T4
+---@param func fun(value:T1,key:T2,index:integer,table:T3):T4
 ---@return {[T2]:T4}
 function table.kmap(tbl,func)
     local rv = {}
+    local i = 1
     for k,v in pairs(tbl) do
-        rv[k] = func(v,k,tbl)
+        rv[k] = func(v,k,i,tbl)
+        i = i + 1
     end
     return rv
 end
@@ -316,7 +330,7 @@ end
 ---Returns a new list flattened by the chosen depth (default depth is 1)
 ---@generic T1,T2,T3,T4,T5,T6,T7,T8,T9,T10
 ---@param tbl {[T2]:T1}|{[T2]:{[T4]:T1}}|T3
----@param depth integer
+---@param depth integer?
 ---@return {[integer]:T1}
 function table.flat(tbl,depth)
     if not depth then depth = 1 end
@@ -371,16 +385,18 @@ function table.find(tbl,pred)
 end
 
 ---Returns the value inside the table that matched the predicate. Otherwise, nil
----@generic T1,T2,T3,T4,T5,T6,T7,T8,T9,T10
+---@generic T1,T2,T3
 ---@param tbl {[T2]:T1}|T3
----@param pred PredicateParameter<T1,T2,T3,T4,T5,T6,T7,T8,T9,T10>
+---@param pred PredicateParameterTableIterator<T1,T2,T3>
 ---@return T1|nil
 function table.kfind(tbl,pred)
     pred = solvepredicate(pred)
+    local i = 1
     for k,v in pairs(tbl) do
-        if pred(v,k,tbl) then
+        if pred(v,k,i,tbl) then
             return v
         end
+        i = i + 1
     end
     return nil
 end
@@ -416,16 +432,18 @@ function table.findindex(tbl,pred)
 end
 
 ---Returns the key of the value inside the list that matched the predicate. Otherwise, nil
----@generic T1,T2,T3,T4,T5,T6,T7,T8,T9,T10
+---@generic T1,T2,T3
 ---@param tbl {[T2]:T1}|T3
----@param pred PredicateParameter<T1,T2,T3,T4,T5,T6,T7,T8,T9,T10>
+---@param pred PredicateParameterTableIterator<T1,T2,T3>
 ---@return T2|nil
 function table.findkey(tbl,pred)
     pred = solvepredicate(pred)
+    local i = 1
     for k,v in pairs(tbl) do
-        if pred(v,k,tbl) then
+        if pred(v,k,i,tbl) then
             return k
         end
+        i = i + 1
     end
     return nil
 end
@@ -586,10 +604,12 @@ end
 ---Executes a function for each key in the list
 ---@generic T1,T2,T3,T4,T5,T6,T7,T8,T9,T10
 ---@param tbl {[T2]:T1}|T3
----@param func fun(value:T1,key:T2,table:T3)
+---@param func fun(value:T1,key:T2,index:integer,table:T3)
 function table.kforin(tbl,func)
+    local i = 1
     for k,v in pairs(tbl) do
-        func(v,k,tbl)
+        func(v,k,i,tbl)
+        i = i+1
     end
 end
 
@@ -624,6 +644,7 @@ function table.ivalues(tbl)
     end
     return rv
 end
+
 '''
 match_indent = true
 times = 1

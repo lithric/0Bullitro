@@ -914,6 +914,8 @@ end
 ---@field t_chip_mod number? poker hand chips to change by for effect
 ---@field h_chips number? chips while in hand
 ---@field h_chip_mod number? chips while in hand to change by for effect
+---@field r_chips number? rank chips
+---@field r_chips_mod number? rank chips to change by for effect
 ---@field x_chips number? chips multiplier
 ---@field x_chip_mod number? chip mult to change by for effect
 ---@field xchips number? alias for x_chips
@@ -930,6 +932,8 @@ end
 ---@field t_x_chip_mod number? poker hand chips multiplier to change by for effect
 ---@field h_x_chips number? chips multiplier while in hand
 ---@field h_x_chip_mod number? chips multiplier while in hand to change by for effect
+---@field r_x_chips number? rank chips multiplier
+---@field r_x_chip_mod number? rank chips multiplier to change by for effect
 ---@field mult number? mult given
 ---@field mult_mod number? mult to change by for effect
 ---@field s_mult number? suit multiplier
@@ -938,6 +942,8 @@ end
 ---@field t_mult_mod number? poker hand multiplier to change by for effect
 ---@field h_mult number? mult while in hand
 ---@field h_mult_mod number? mult while in hand to change by for effect
+---@field r_mult number? rank multiplier
+---@field r_mult_mod number? rank multiplier to change by for effect
 ---@field x_mult number? mult multiplier
 ---@field x_mult_mod number? mult multiplier to change by for effect
 ---@field xmult number? alias for x_mult
@@ -954,6 +960,8 @@ end
 ---@field t_x_mult_mod number? poker hand mult multiplier to change by for effect
 ---@field h_x_mult number? mult multiplier while in hand
 ---@field h_x_mult_mod number? mult multiplier while in hand to change by for effect
+---@field r_x_mult number? rank mult multiplier
+---@field r_x_mult_mod number? rank mult multiplier to change by for effect
 ---@field suit CardSuitName? target suit
 ---@field rank CardRankName? target rank
 ---@field type (PokerHandName|TagEffectTimingName|"")? target poker hand
@@ -1188,27 +1196,6 @@ _G.JokerObject = Object:extend()
 ---@param name string
 ---@param text string
 function JokerObject:init(name,text)
-   local function log_ordering(extra,start,prefix)
-      if not start then start = 1 end
-      if not prefix then prefix = "" end
-      for key,_ in pairs(extra) do
-         if key == "extra" then
-            goto continue
-         end
-         self.ordering[prefix..key] = start
-         text = text:gsub("#"..prefix..key.."#","#"..(start).."#")
-         start = start+1
-         ::continue::
-      end
-      if extra.extra then
-         log_ordering(extra.extra,start,"extra."..prefix)
-      end
-      local text_table = {}
-      for v in text:gmatch("[^\n]+") do
-         table.insert(text_table,v)
-      end
-      self.smods.loc_txt.text = text_table
-   end
    self.registered = false
    self.installed = false
    self.size = "default"
@@ -1216,7 +1203,8 @@ function JokerObject:init(name,text)
       key = nil,
       loc_txt = {
          name = nil,
-         text = {}
+         text = {},
+         raw_text = "",
       },
       atlas = nil,
       pos = {x = 0, y = 0},
@@ -1240,8 +1228,6 @@ function JokerObject:init(name,text)
    }
    self.name = name
    self.text = text
-   self.ordering = {}
-   log_ordering(self.smods.config.extra)
 end
 
 ---comment
@@ -1462,47 +1448,9 @@ function JokerObject:set_attributes(attributes_table)
    if self.registered then
        error("Changing the foundational attributes of a registered joker is undefined behavior!")
    end
-   local text = self.smods.loc_txt.raw_text
-   local function log_ordering(extra,start,prefix)
-      if not start then start = 1 end
-      if not prefix then prefix = "" end
-      for key,_ in pairs(extra) do
-         if key == "extra" then
-            goto continue
-         end
-         self.ordering[prefix..key] = start
-         text = text:gsub("#"..prefix..key.."#","#"..(start).."#")
-         start = start+1
-         ::continue::
-      end
-      if extra.extra then
-         log_ordering(extra.extra,start,"extra."..prefix)
-      end
-      local text_table = {}
-      for v in text:gmatch("[^\n]+") do
-         table.insert(text_table,v)
-      end
-      self.smods.loc_txt.text = text_table
-   end
-   local function unwrap_extra(tbl,extra,prefix)
-      if not prefix then prefix = "extra." end
-      if not extra then extra = tbl.extra end
-      for k,v in pairs(extra) do
-         tbl[prefix..k] = v
-      end
-      tbl.extra = nil
-      if extra.extra then
-         unwrap_extra(tbl,extra.extra,prefix.."extra.")
-         extra.extra = nil
-      end
-   end
-   if attributes_table.extra then
-      unwrap_extra(attributes_table)
-   end
    table.implement(self.smods.config.extra,{
       ["@override"] = attributes_table
    })
-   log_ordering(self.smods.config.extra)
    return self
 end
 
@@ -1512,27 +1460,46 @@ end
 
 function JokerObject:setup()
    if self.installed then return end
+   local function collapse_extra(extra,prefix)
+      if not prefix then prefix = "" end
+      local ordered_indices = {}
+      local data_list = {}
+      table.kforin(extra,function(v,k,i)
+         if type(v) == "table" and v.extra then
+            local other_ordered, other_data = collapse_extra(v.extra,"extra.")
+            ordered_indices = table.flat({ordered_indices,other_ordered})
+            data_list = table.flat({data_list,other_data})
+         else
+            ordered_indices[#ordered_indices+1] = {prefix..k,i}
+            data_list[#data_list+1] = v
+         end
+      end)
+      return ordered_indices, data_list
+   end
+   local data, _ = collapse_extra(self.smods.config.extra)
+   for _,v in ipairs(data) do
+      local key = v[1]
+      local index = v[2]
+      local text, count = self.smods.loc_txt.raw_text:gsub("#"..key.."#","#"..index.."#")
+      self.text = text
+   end
    if self.smods.loc_vars == nil then
-      local extra_list = {}
-      for k, v in pairs(safetable(self.smods.config.extra)) do
-          table.insert(extra_list,k)
-      end
       ---comment
       ---@param this any
       ---@param info_queue any
       ---@param card Card
       ---@return table
       self.smods.loc_vars = function(this, info_queue, card)
-         local function extract_order(ordering,extra,final)
-            if not final then final = {} end
-            for key,index in pairs(ordering) do
-               final[index] = extra[key]
-            end
-            return final
+         local new_data, new_vars = collapse_extra(card.ability.extra)
+         local vars = {}
+         for _,v in ipairs(data) do
+            local key = v[1]
+            local index = v[2]
+            local new_index = table.findindex(new_data,function(w) return w[1]==key end)
+            if new_index == 0 then error("something when terribly wrong") end
+            vars[index] = new_vars[new_index]
          end
-         local vars = extract_order(self.ordering,card.ability.extra)
-
-          return {vars = vars}
+         return {vars = vars}
       end
   end
   if self.smods.in_pool == nil then
