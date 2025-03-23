@@ -91,12 +91,45 @@ _G.wrapnumber = function(num,first_bound,second_bound)
     return ((num-bottom_val)%range_length)+bottom_val
 end
 
+_G.remove_noops = function(obj,noop_condition,noop_func)
+    if not noop_condition then noop_condition = function(v) return false end end
+    if not noop_func then noop_func = function(v) return nil end end
+    if type(obj) ~= "table" then return nil end -- non-table handled
+    if table.kcount(obj,function()return true end) == 0 then return nil end -- empty table handled
+    if table.kcount(obj,function()return true end) == 1 and obj.extra ~= nil then return remove_noops(obj.extra) end -- redundant table handled
+    if noop_condition(obj) then return remove_noops(noop_func(obj),noop_condition,noop_func) end -- extra conditions handled
+    if not obj.extra then return obj end -- single-op table handled (base case)
+    obj.extra = remove_noops(obj.extra) -- do the same for the extra tables
+    return obj
+end
+
 _G.combine_return = function(base,more)
+    base = remove_noops(base,function(tbl)
+        return table.ksome(tbl,function(v,k) return v == AbilityNames[k] and tonumber(AbilityNames[k]) and true or false end)
+    end,function(tbl)
+        for k,v in pairs(tbl) do
+            if v == AbilityNames[k] and tonumber(AbilityNames[k]) then
+                tbl[k] = nil
+            end
+        end
+        return tbl
+    end)
+    more = remove_noops(more,function(tbl)
+        return table.ksome(tbl,function(v,k) return v == AbilityNames[k] and tonumber(AbilityNames[k]) and true or false end)
+    end,function(tbl)
+        for k,v in pairs(tbl) do
+            if v == AbilityNames[k] and tonumber(AbilityNames[k]) then
+                tbl[k] = nil
+            end
+        end
+        return tbl
+    end)
    if type(base) ~= "table" and type(more) ~= "table" then return nil end
    if type(base) ~= "table" then return safetable(more) end
    if type(more) ~= "table" then return safetable(base) end
    base = safetable(base)
    more = safetable(more)
+   ---@type table|nil
    local final_return = base
    if base.extra then
        base.extra = safetable(base.extra)
@@ -104,6 +137,16 @@ _G.combine_return = function(base,more)
    else
        final_return.extra = more
    end
+   final_return = remove_noops(final_return,function(tbl)
+        return table.ksome(tbl,function(v,k) return v == AbilityNames[k] and tonumber(AbilityNames[k]) and true or false end)
+    end,function(tbl)
+        for k,v in pairs(tbl) do
+            if v == AbilityNames[k] and tonumber(AbilityNames[k]) then
+                tbl[k] = nil
+            end
+        end
+        return tbl
+    end)
    return final_return
 end
 '''

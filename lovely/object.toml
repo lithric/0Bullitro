@@ -32,35 +32,6 @@ payload = '''
 ---@param options ListenerConfig?
 ---@return self
 function Object:addEventListener(eventName,listener,options)
-    local eventData = nil
-    if table.includes({"on_score_card","on_discard_card"},eventName) then
-        eventData = function(_self,card,context)
-            return {
-                SELF = _self,
-                CONTEXT = context,
-                self = EventObject:new(card),
-                other = EventObject:new(context.other_card)
-            }
-        end
-    elseif table.includes({"on_joker_card"},eventName) then
-        eventData = function(_self,card,context)
-            return {
-                SELF = _self,
-                CONTEXT = context,
-                self = EventObject:new(card),
-                other = EventObject:new(context.other_joker)
-            }
-        end
-    else
-        eventData = function(_self,card,context)
-            return {
-                SELF = _self,
-                CONTEXT = context,
-                self = EventObject:new(card),
-                other = EventObject:new(card)
-            }
-        end
-    end
     ---@type table<EventName,(fun(data:EventContext):boolean)>
     local eventCondition = {
         on_update = function(data) return true end,
@@ -131,14 +102,14 @@ function Object:addEventListener(eventName,listener,options)
         none = function(data) return false end,
     }
     options = options or {}
-    local function build_function(cond_func,combine_func)
+    local function build_function(cond_func,combine_func,event_data_func)
         if combine_func == nil then combine_func = combine_return end
         return function(old_func)
             return function(_self,card,context)
                 local first = nil
                 local second = nil
                 first = old_func(_self,card,context)
-                local gotEventData = eventData(_self,card,context)
+                local gotEventData = event_data_func(_self,card,context)
                 if solvepredicate(cond_func)(gotEventData) then
                     second = listener(gotEventData)
                     local ability = gotEventData.self.object.ability
@@ -155,14 +126,42 @@ function Object:addEventListener(eventName,listener,options)
    table.implement(self,{
     ["@override"] = {
         calculate = table.includes({"on_joker","on_score_card","on_round_end","on_joker_end","on_discard_card","on_discard_click","on_play_click"},eventName) and
-        build_function(eventCondition[eventName]) or nil,
+        build_function(eventCondition[eventName],nil,function(_self,card,context)
+            return {
+                SELF =  _self,
+                CONTEXT = context,
+                self = EventObject:new(card),
+                other = table.includes({"on_score_card","on_discard_card"},eventName) and EventObject:new(context.other_card) or EventObject:new(card)
+            }
+        end) or nil,
         calc_dollar_bonus = table.includes({"on_round_bonus"},eventName) and build_function(eventCondition[eventName],function(a,b)
             local sum = (a or 0)+(b or 0)
             if sum == 0 then return nil end
             return sum
+        end,function(_self,card,context)
+            return {
+                SELF =  _self,
+                CONTEXT = context,
+                self = EventObject:new(card),
+                other = EventObject:new(card)
+            }
         end),
-        add_to_deck = table.includes({"on_add_to_deck"},eventName) and build_function(eventCondition[eventName],function()end) or nil,
-        remove_from_deck = table.includes({"on_remove_from_deck",eventName}) and build_function(eventCondition[eventName],function()end) or nil,
+        add_to_deck = table.includes({"on_add_to_deck"},eventName) and build_function(eventCondition[eventName],function()end,function(_self,card,context)
+            return {
+                SELF =  _self,
+                CONTEXT = context,
+                self = EventObject:new(card),
+                other = EventObject:new(card)
+            }
+        end) or nil,
+        remove_from_deck = table.includes({"on_remove_from_deck",eventName}) and build_function(eventCondition[eventName],function()end,function(_self,card,context)
+            return {
+                SELF =  _self,
+                CONTEXT = context,
+                self = EventObject:new(card),
+                other = EventObject:new(card)
+            }
+        end) or nil,
     }
    })
    return self

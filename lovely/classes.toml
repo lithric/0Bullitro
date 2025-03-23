@@ -13,6 +13,7 @@ payload = '''
 ---@field object Card
 ---@field applied_abilities table
 _G.EventObject = {}
+EventObject.__index = EventObject
 
 function EventObject:get_type()
     return table.get(self,"object","config","center","set") and self.object.config.center.set
@@ -35,6 +36,11 @@ function EventObject:get(field)
         return table.get(self.object,"area") and self.object.area
     elseif field == "area_type" then
         return table.get(self.object,"area","config","type") and self.object.area.config.type
+    elseif field == "applied_abilities" then
+        if self.object and not table.get(self.object,"ability","applied_abilities") then
+            table.set(self.object,"ability","applied_abilities",{})
+        end
+        return table.get(self.object,"ability","applied_abilities") and self.object.ability["applied_abilities"]
     else
         return table.get(self.object,"ability","extra",field) and self.object.ability.extra[field]
     end
@@ -45,6 +51,7 @@ end
 ---@param val number|table|string
 ---@param force boolean?
 function EventObject:set(field,val,force)
+    if not self.object then return nil end
     if not val then val = AbilityNames[field] or 0 end
     if ({event_id=1,nine_tally=1,steel_tally=1,stone_tally=1,previous_odds=1,extra=1})[field] and not force then error("tried to tug deterministic value of object without force!") end
     if self:get("applied_abilities")[field] == nil or self:get("applied_abilities")[field] == true then
@@ -112,14 +119,21 @@ end
 ---@param force boolean? allows you to force deterministic values to be changed
 function EventObject:tug(field,val,operation_func,force)
     if operation_func == nil then operation_func = function(a,b) return a + b end end
-    local field_value = tonumber(self:get(field)) or tonumber(AbilityNames[field]) or 0
-    local new_value = operation_func(field_value,val or 0)
-    self:set(field,new_value,force)
+    local field_value = self:get(field) --[[@as string|number|Number|nil]]
+    if type(field_value) == "string" then
+        self:set(field,val or field_value,force)
+    else
+        field_value = tonumber(field_value) or tonumber(AbilityNames[field]) or 0
+        local new_value = operation_func(field_value,val or 0)
+        self:set(field,new_value,force)
+    end
 end
+
 
 ---comment
 ---@param field AbilityName
 function EventObject:apply_ability(field)
+    if not self.object then return nil end
     if ({event_id=1,nine_tally=1,steel_tally=1,stone_tally=1,previous_odds=1,extra=1})[field] then return end
     if self:get("applied_abilities")[field] == true then return end
     self:get("applied_abilities")[field] = nil
@@ -130,6 +144,7 @@ end
 ---comment
 ---@param field AbilityName
 function EventObject:resign_ability(field)
+    if not self.object then return nil end
     if ({event_id=1,nine_tally=1,steel_tally=1,stone_tally=1,previous_odds=1,extra=1})[field] then return end
     if self:get("applied_abilities")[field] == false then return end
     self:set(field,AbilityNames[field] or 0)
@@ -158,8 +173,12 @@ end
 function EventObject:new(card)
     local obj = setmetatable({},EventObject)
     obj.object = card
-    if not table.get(obj.object,"ability","extra","applied_abilities") then
-        table.set(obj.object,"ability","extra","applied_abilities",{})
+    if obj.object then
+        table.implement(obj.object,{
+            ability = {
+                applied_abilities = {}
+            }
+        })
     end
     return obj
 end

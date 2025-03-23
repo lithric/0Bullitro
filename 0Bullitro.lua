@@ -962,8 +962,8 @@ end
 ---@field h_x_mult_mod number? mult multiplier while in hand to change by for effect
 ---@field r_x_mult number? rank mult multiplier
 ---@field r_x_mult_mod number? rank mult multiplier to change by for effect
----@field suit CardSuitName? target suit
----@field rank CardRankName? target rank
+---@field suit (CardSuitName|"")? target suit
+---@field rank (CardRankName|"")? target rank
 ---@field type (PokerHandName|TagEffectTimingName|"")? target poker hand
 ---@field dollars number? round bonus given
 ---@field h_dollars number? bonus money if held in hand
@@ -1015,7 +1015,7 @@ end
 ---@field consumeable_slot number? amount of extra consumeable slots
 ---@field voucher CardVoucherName? extra voucher
 ---@field vouchers CardVoucherName[]? multiple extra vouchers
----@field consumeable ConsumeableName? extra consumeable
+---@field consumeable (ConsumeableName|boolean)? extra consumeable
 ---@field consumeables ConsumeableName[]? multiple extra consumeables
 ---@field spectral_rate number? rate of spectral cards
 ---@field remove_faces boolean? whether to remove all face cards from the deck when this event is executed
@@ -1509,6 +1509,7 @@ function JokerObject:setup()
   end
    self:addEventListener("on_joker",function(eventObject)
       local card = eventObject.self
+      if not (card:get("mult") or card:get("x_mult") or card:get("chips") or card:get("x_chips")) then return nil end
       return {
          mult = card:get("mult"),
          x_mult = card:get("x_mult"),
@@ -1519,21 +1520,25 @@ function JokerObject:setup()
    self:addEventListener("on_joker",function(eventObject)
       local card = eventObject.self
       local context = eventObject.CONTEXT
+      local target_hand = card:get("type")
+      if not target_hand or target_hand == "" then return nil end
       return {
-         mult = context.scoring_name == card:get("type") and card:get("t_mult") or nil,
-         x_mult = context.scoring_name == card:get("type") and card:get("t_x_mult") or nil,
-         chips = context.scoring_name == card:get("type") and card:get("t_chips") or nil,
-         x_chips = context.scoring_name == card:get("type") and card:get("t_x_chips") or nil,
+         mult = context.scoring_name == target_hand and card:get("t_mult") or nil,
+         x_mult = context.scoring_name == target_hand and card:get("t_x_mult") or nil,
+         chips = context.scoring_name == target_hand and card:get("t_chips") or nil,
+         x_chips = context.scoring_name == target_hand and card:get("t_x_chips") or nil,
       }
    end)
    self:addEventListener("on_score_card",function(eventObject)
       local card = eventObject.self
       local other = eventObject.other
+      local target_suit = card:get("suit")
+      if not target_suit or target_suit == "" then return nil end
       return {
-         mult = other.object:is_suit(card:get("suit")) and card:get("s_mult") or nil,
-         x_mult = other.object:is_suit(card:get("suit")) and card:get("s_x_mult") or nil,
-         chips = other.object:is_suit(card:get("suit")) and card:get("s_chips") or nil,
-         x_chips = other.object:is_suit(card:get("suit")) and card:get("s_x_chips") or nil,
+         mult = other.object:is_suit(target_suit) and card:get("s_mult") or nil,
+         x_mult = other.object:is_suit(target_suit) and card:get("s_x_mult") or nil,
+         chips = other.object:is_suit(target_suit) and card:get("s_chips") or nil,
+         x_chips = other.object:is_suit(target_suit) and card:get("s_x_chips") or nil,
       }
    end)
    self:addEventListener("on_score_card",function(eventObject)
@@ -1556,7 +1561,8 @@ function JokerObject:setup()
             ),
             0
       )
-      return bonus ~= 0 and bonus or nil
+      if bonus == 0 then return nil end
+      return bonus
    end)
    self:addEventListener("on_add_to_deck",function(eventObject)
       local card = eventObject.self
