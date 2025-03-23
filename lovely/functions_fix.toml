@@ -1,0 +1,16 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+[[patches]]
+[patches.pattern]
+target = "engine/object.lua"
+pattern = "--||--"
+position = "before"
+payload = '''
+---@type fun(data: string|love.Data|nil): any
+STR_UNPACK = STR_UNPACK
+'''
+match_indent = true
+times = 1

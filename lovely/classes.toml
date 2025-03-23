@@ -27,7 +27,7 @@ function EventObject:get_area_type()
 end
 
 ---comment
----@param field AbilityNames|AbilityDataNames|"type"|"area"|"area_type"|"applied_abilities"
+---@param field AbilityName|AbilityDataName|"type"|"area"|"area_type"|"applied_abilities"
 function EventObject:get(field)
     if field == "type" then
         return table.get(self.object,"config","center","set") and self.object.config.center.set
@@ -41,7 +41,7 @@ function EventObject:get(field)
 end
 
 ---comment
----@param field AbilityNames
+---@param field AbilityName
 ---@param val number|table|string
 ---@param force boolean?
 function EventObject:set(field,val,force)
@@ -106,7 +106,7 @@ function EventObject:set(field,val,force)
 end
 
 ---comment
----@param field AbilityNames
+---@param field AbilityName
 ---@param val number?
 ---@param operation_func (fun(a:number|Number,b:number|Number): number|Number)?
 ---@param force boolean? allows you to force deterministic values to be changed
@@ -118,7 +118,7 @@ function EventObject:tug(field,val,operation_func,force)
 end
 
 ---comment
----@param field AbilityNames
+---@param field AbilityName
 function EventObject:apply_ability(field)
     if ({event_id=1,nine_tally=1,steel_tally=1,stone_tally=1,previous_odds=1,extra=1})[field] then return end
     if self:get("applied_abilities")[field] == true then return end
@@ -128,7 +128,7 @@ function EventObject:apply_ability(field)
 end
 
 ---comment
----@param field AbilityNames
+---@param field AbilityName
 function EventObject:resign_ability(field)
     if ({event_id=1,nine_tally=1,steel_tally=1,stone_tally=1,previous_odds=1,extra=1})[field] then return end
     if self:get("applied_abilities")[field] == false then return end

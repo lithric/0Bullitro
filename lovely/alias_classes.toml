@@ -12,9 +12,9 @@ payload = '''
 ---@class ListenerConfig
 ---@field listener_type ("on_trigger")?
 ---@field self_type CardTypeName?
----@field self_area CardAreaType?
+---@field self_area CardAreaName?
 ---@field other_type CardTypeName?
----@field other_area CardAreaType?
+---@field other_area CardAreaName?
 
 
 ---@class GameEventContext

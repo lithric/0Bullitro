@@ -12,10 +12,6 @@ _G.G = G
 ---@operator call:Back
 _G.Back = Back
 
----@class Game: Object
----@operator call:Game
-_G.Game = Game
-
 ---@class Tag: Object
 ---@operator call:Tag
 _G.Tag = Tag

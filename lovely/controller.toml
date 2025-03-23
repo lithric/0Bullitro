@@ -10,8 +10,6 @@ pattern = "---@class Controller"
 position = "at"
 payload = '''
 
----@alias Position2D {x:number,y:number}
-
 ---@class ControlHandle
 ---@field handled boolean
 ---@field target (Card|Node|UIElement)?

@@ -6,12 +6,22 @@ priority = 0
 [[patches]]
 [patches.pattern]
 target = "game.lua"
+pattern = "Game = Object:extend()"
+position = "before"
+payload = '''
+---@class Game: Object
+---@operator call(...):Game
+'''
+match_indent = true
+times = 1
+
+[[patches]]
+[patches.pattern]
+target = "game.lua"
 pattern = "    self.P_CARDS = {"
 position = "before"
 payload = '''
----@alias P_CARDS_VALUE {name:string,value:"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"|"10"|"Jack"|"Queen"|"King"|"Ace",suit:"Hearts"|"Clubs"|"Diamonds"|"Spades",pos:{x:number,y:number}}
----@alias P_CARDS_TYPE {[string]:P_CARDS_VALUE}
----@type P_CARDS_TYPE
+---@enum (key) PlayingCardName
 '''
 match_indent = true
 times = 1
@@ -21,9 +31,7 @@ target = "game.lua"
 pattern = "    self.P_CENTERS = {"
 position = "before"
 payload = '''
----@alias P_CENTERS_VALUE {max:number,freq:number,line:string,label:string,available:boolean,kind:CardBoosterKindName,weight:number,order:number,unlocked:boolean,start_alerted:boolean,discovered:boolean,blueprint_compat:boolean,perishable_compat:boolean,eternal_compat:boolean,rarity:1|2|3|4,cost:number,name:CardNameName,pos:{x:number,y:number},set:CardTypeName,effect:CardEffectName,cost_mult:number,config:EventQuery,wip:boolean,demo:boolean,alerted:boolean}
----@alias P_CENTERS_TYPE {[string]:P_CENTERS_VALUE}
----@type P_CENTERS_TYPE
+---@enum (key) CardNameStrict
 '''
 match_indent = true
 times = 1
