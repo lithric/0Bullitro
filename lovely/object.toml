@@ -125,7 +125,7 @@ function Object:addEventListener(eventName,listener,options)
     end
    table.implement(self,{
     ["@override"] = {
-        calculate = table.includes({"on_joker","on_score_card","on_round_end","on_joker_end","on_discard_card","on_discard_click","on_play_click","on_play_discard_end"},eventName) and
+        calculate = table.includes({"on_joker","on_score_card","on_round_end","on_joker_end","on_discard_card","on_discard_click","on_play_click","on_play_discard_end","on_play_end"},eventName) and
         build_function(eventCondition[eventName],nil,function(_self,card,context)
             return {
                 SELF =  _self,

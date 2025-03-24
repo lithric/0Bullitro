@@ -1058,6 +1058,7 @@ end
 ---@field r_x_mult_mod_minus number?
 ---@field h_mod_minus number?
 ---@field h_size_mod_minus number?
+---@field target AbilityName?
 ---@field new (fun(self:self,eventId:string,recurse:number?):EventQuery)?
 ---@field __call (fun(self:self):EventQuery)?
 ---@field __index unknown?
@@ -1511,6 +1512,26 @@ function JokerObject:evalEventListeners()
          x_chips = context.scoring_name == target_hand and card:get("t_x_chips") or nil,
       }
    end)
+   self:addEventListener("on_play_end",function(eventObject)
+      local card = eventObject.self
+      local val = card:get("hand_add") --[[@as number]]
+      local target = card:get("target") --[[@as AbilityName]]
+      if not val or val == 0 then return nil end
+      if not target or target == "" then return nil end
+      card:tug(target,val)
+   end)
+   self:addEventListener("on_discard_click",function(eventObject)
+      local card = eventObject.self
+      local val = card:get("discard_sub") --[[@as number]]
+      local target = card:get("target") --[[@as AbilityName]]
+      if not val or val == 0 then return nil end
+      if not target or target == "" then return nil end
+      card:tug(target,-val)
+      if card:get(target) <= 0 and card:get("joker_effect_hint") == "Green Joker" then
+         card:set(target,0)
+         print("ok")
+      end
+   end)
    self:addEventListener("on_score_card",function(eventObject)
       local card = eventObject.self
       local other = eventObject.other
@@ -1573,6 +1594,16 @@ function JokerObject:evalEventListeners()
             end
             if card:get("joker_effect_hint") == "Ice Cream" then
                if card:get("chips") <= 0 then
+                  card.object:start_dissolve()
+               end
+            end
+            if card:get("joker_effect_hint") == "Popcorn" then
+               if card:get("mult") <= 0 then
+                  card.object:start_dissolve()
+               end
+            end
+            if card:get("joker_effect_hint") == "Ramen" then
+               if card:get("x_mult") <= 0 then
                   card.object:start_dissolve()
                end
             end
@@ -1795,42 +1826,14 @@ JokerObject:new("ice cream",[[
 every hand played
 ]]):set_attributes({chips = 100, chip_mod_minus = 5, mod_timing = "on_play_discard_end", joker_effect_hint = "Ice Cream"}):register()
 
-local popcorn = JokerObject:new("popcorn",[[
+JokerObject:new("popcorn",[[
 this is a popcorn #mult#
-]]):set_attributes({mult = 20})
-popcorn:addEventListener("on_play_discard_end",function(eventObject)
-   local card = eventObject.self
-   card:tug("mult",-4)
-   if (card:get("mult") <= 0) then
-      card.object:start_dissolve()
-   end
-end)
-popcorn.in_pool = false
-popcorn:register()
+]]):set_attributes({mult = 20, mult_mod_minus = 4, mod_timing = "on_play_discard_end", joker_effect_hint = "Popcorn"}):register()
 
-local ramen = JokerObject:new("ramen",[[
+JokerObject:new("ramen",[[
 this is a ramen #x_mult#
-]]):set_attributes({x_mult = 2})
-ramen:addEventListener("on_discard_card",function(eventObject)
-   local card = eventObject.self
-   card:tug("x_mult",-0.01)
-   if (card:get("x_mult") <= 1) then
-      card.object:start_dissolve()
-   end
-end)
-ramen.in_pool = false
-ramen:register()
+]]):set_attributes({x_mult = 2, x_mult_mod_minus = 0.01, mod_timing = "on_discard_card", joker_effect_hint = "Ramen"}):register()
 
-local green_guy = JokerObject:new("green guy",[[
-this is a green guy #mult#
-]])
-green_guy:addEventListener("on_play_end",function(eventObject)
-   local card = eventObject.self
-   card:tug("mult",1)
-end)
-green_guy:addEventListener("on_discard_click",function(eventObject)
-   local card = eventObject.self
-   card:tug("mult",-1)
-end)
-green_guy.in_pool = false
-green_guy:register()
+JokerObject:new("green guy",[[
+this is a green gui #mult#
+]]):set_attributes({mult = 0, hand_add = 1, discard_sub = 1, target = "mult", joker_effect_hint = "Green Joker"}):register()

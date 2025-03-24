@@ -303,6 +303,7 @@ _G.AbilityNames = {
     ["r_x_mult_mod_minus"] = 0,
     ["h_mod_minus"] = 0,
     ["h_size_mod_minus"] = 0,
+    ["target"] = "",
 }
 
 ---@enum (key) AbilityMod
