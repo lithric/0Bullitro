@@ -975,6 +975,7 @@ end
 ---@field h_plays number? extra hand plays
 ---@field d_size number? extra discards (not my choice of name btw)
 ---@field h_size number? extra hand size
+---@field h_size_mod number? extra hand size change
 ---@field hand_size number? alias for h_size
 ---@field __GET_SET__hand_size unknown?
 ---@field h_mod number? extra hand size value for some effect
@@ -1028,6 +1029,35 @@ end
 ---@field choose number? number of choices for booster pack effect
 ---@field forced_selection boolean? whether this event causes the object to be forced to be highlighted
 ---@field perma_bonus number? the amount of permanent bonus on object
+---@field effect (CardEffectName|"")?
+---@field joker_effect_hint CardJokerTitle?
+---@field mod_timing (EventName|"")?
+---@field chip_mod_minus number?
+---@field s_chip_mod_minus number?
+---@field t_chip_mod_minus number?
+---@field h_chip_mod_minus number?
+---@field r_chip_mod_minus number?
+---@field x_chip_mod_minus number?
+---@field xchip_mod_minus number?
+---@field Xchip_mod_minus number?
+---@field s_x_chip_mod_minus number?
+---@field t_x_chip_mod_minus number?
+---@field h_x_chip_mod_minus number?
+---@field r_x_chip_mod_minus number?
+---@field mult_mod_minus number?
+---@field s_mult_mod_minus number?
+---@field t_mult_mod_minus number?
+---@field h_mult_mod_minus number?
+---@field r_mult_mod_minus number?
+---@field x_mult_mod_minus number?
+---@field xmult_mod_minus number?
+---@field Xmult_mod_minus number?
+---@field s_x_mult_mod_minus number?
+---@field t_x_mult_mod_minus number?
+---@field h_x_mult_mod_minus number?
+---@field r_x_mult_mod_minus number?
+---@field h_mod_minus number?
+---@field h_size_mod_minus number?
 ---@field new (fun(self:self,eventId:string,recurse:number?):EventQuery)?
 ---@field __call (fun(self:self):EventQuery)?
 ---@field __index unknown?
@@ -1458,55 +1488,7 @@ function JokerObject:get_attribute(name)
    return self.smods.config.extra[name]
 end
 
-function JokerObject:setup()
-   if self.installed then return end
-   local function collapse_extra(extra,prefix)
-      if not prefix then prefix = "" end
-      local ordered_indices = {}
-      local data_list = {}
-      table.kforin(extra,function(v,k,i)
-         if type(v) == "table" and v.extra then
-            local other_ordered, other_data = collapse_extra(v.extra,"extra.")
-            ordered_indices = table.flat({ordered_indices,other_ordered})
-            data_list = table.flat({data_list,other_data})
-         else
-            ordered_indices[#ordered_indices+1] = {prefix..k,i}
-            data_list[#data_list+1] = v
-         end
-      end)
-      return ordered_indices, data_list
-   end
-   local data, _ = collapse_extra(self.smods.config.extra)
-   for _,v in ipairs(data) do
-      local key = v[1]
-      local index = v[2]
-      local text, count = self.smods.loc_txt.raw_text:gsub("#"..key.."#","#"..index.."#")
-      self.text = text
-   end
-   if self.smods.loc_vars == nil then
-      ---comment
-      ---@param this any
-      ---@param info_queue any
-      ---@param card Card
-      ---@return table
-      self.smods.loc_vars = function(this, info_queue, card)
-         local new_data, new_vars = collapse_extra(card.ability.extra)
-         local vars = {}
-         for _,v in ipairs(data) do
-            local key = v[1]
-            local index = v[2]
-            local new_index = table.findindex(new_data,function(w) return w[1]==key end)
-            if new_index == 0 then error("something when terribly wrong") end
-            vars[index] = new_vars[new_index]
-         end
-         return {vars = vars}
-      end
-  end
-  if self.smods.in_pool == nil then
-      self.smods.in_pool = function(this,var1,var2)
-          return true
-      end
-  end
+function JokerObject:evalEventListeners()
    self:addEventListener("on_joker",function(eventObject)
       local card = eventObject.self
       if not (card:get("mult") or card:get("x_mult") or card:get("chips") or card:get("x_chips")) then return nil end
@@ -1572,6 +1554,84 @@ function JokerObject:setup()
       local card = eventObject.self
       card:resign_all_abilities()
    end)
+   for timing,v in pairs(EventNames) do
+      if not v then goto continue end
+      self:addEventListener(timing,function(eventObject)
+         local card = eventObject.self
+         if card:get("mod_timing") ~= timing then return nil end
+         table.kforin(AbilityMods,function(w,key)
+            local val = card:get(key) --[[@as number]]
+            if val and val ~= 0 then
+               if key == "h_mod" then val = -val end
+               if key:match("_minus$") then val = -val end
+               card:tug(w,val)
+            end
+            if card:get("joker_effect_hint") == "Turtle Bean" then
+               if card:get("h_size") <= 0 then
+                  card.object:start_dissolve()
+               end
+            end
+            if card:get("joker_effect_hint") == "Ice Cream" then
+               if card:get("chips") <= 0 then
+                  card.object:start_dissolve()
+               end
+            end
+         end)
+      end)
+      ::continue::
+   end
+end
+
+function JokerObject:setup()
+   if self.installed then return end
+   local function collapse_extra(extra,prefix)
+      if not prefix then prefix = "" end
+      local ordered_indices = {}
+      local data_list = {}
+      table.kforin(extra,function(v,k,i)
+         if type(v) == "table" and v.extra then
+            local other_ordered, other_data = collapse_extra(v.extra,"extra.")
+            ordered_indices = table.flat({ordered_indices,other_ordered})
+            data_list = table.flat({data_list,other_data})
+         else
+            ordered_indices[#ordered_indices+1] = {prefix..k,i}
+            data_list[#data_list+1] = v
+         end
+      end)
+      return ordered_indices, data_list
+   end
+   local data, _ = collapse_extra(self.smods.config.extra)
+   for _,v in ipairs(data) do
+      local key = v[1]
+      local index = v[2]
+      local text, count = self.smods.loc_txt.raw_text:gsub("#"..key.."#","#"..index.."#")
+      self.text = text
+   end
+   if self.smods.loc_vars == nil then
+      ---comment
+      ---@param this any
+      ---@param info_queue any
+      ---@param card Card
+      ---@return table
+      self.smods.loc_vars = function(this, info_queue, card)
+         local new_data, new_vars = collapse_extra(card.ability.extra)
+         local vars = {}
+         for _,v in ipairs(data) do
+            local key = v[1]
+            local index = v[2]
+            local new_index = table.findindex(new_data,function(w) return w[1]==key end)
+            if new_index == 0 then error("something went terribly wrong") end
+            vars[index] = new_vars[new_index]
+         end
+         return {vars = vars}
+      end
+  end
+  if self.smods.in_pool == nil then
+      self.smods.in_pool = function(this,var1,var2)
+          return true
+      end
+  end
+  self:evalEventListeners()
    self.installed = true
 end
 
@@ -1723,33 +1783,17 @@ hand contains
 a {C:attention}#type#{}
 ]]):set_attributes({t_mult=8,type="Pair"}):override("Jolly")
 
+JokerObject:new("Turtle Bean",[[
+{C:attention}+#h_size#{} hand size,
+reduces by {C:red}#h_mod#{}
+each round
+]]):set_attributes({h_size = 5,h_mod = 1, mod_timing = "on_round_end", joker_effect_hint = "Turtle Bean"}):register()
 
-local bean = JokerObject:new("bean",[[
-this is a bean #h_size#
-]])
-:set_attributes({h_size = 5})
-bean:addEventListener("on_round_end",function(eventObject)
-   local card = eventObject.self
-   card:tug("h_size",-1)
-   if (card:get("h_size") <= 0) then
-      card.object:start_dissolve()
-   end
-end)
-bean.in_pool = false
-bean:register()
-
-local ice_cream = JokerObject:new("ice cream",[[
-this is a ice cream #chips#
-]]):set_attributes({chips = 100})
-ice_cream:addEventListener("on_play_discard_end",function(eventObject)
-   local card = eventObject.self
-   card:tug("chips",-5)
-   if (card:get("chips") <= 0) then
-      card.object:start_dissolve()
-   end
-end)
-ice_cream.in_pool = false
-ice_cream:register()
+JokerObject:new("ice cream",[[
+{C:chips}+#chips#{} Chips
+{C:chips}-#chip_mod_minus#{} Chips for
+every hand played
+]]):set_attributes({chips = 100, chip_mod_minus = 5, mod_timing = "on_play_discard_end", joker_effect_hint = "Ice Cream"}):register()
 
 local popcorn = JokerObject:new("popcorn",[[
 this is a popcorn #mult#
