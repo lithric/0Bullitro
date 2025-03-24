@@ -1816,9 +1816,9 @@ a {C:attention}#type#{}
 
 JokerObject:new("Turtle Bean",[[
 {C:attention}+#h_size#{} hand size,
-reduces by {C:red}#h_mod#{}
+reduces by {C:red}#h_size_mod_minus#{}
 each round
-]]):set_attributes({h_size = 5,h_mod = 1, mod_timing = "on_round_end", joker_effect_hint = "Turtle Bean"}):register()
+]]):set_attributes({h_size = 5,h_size_mod_minus = 1, mod_timing = "on_round_end", joker_effect_hint = "Turtle Bean"}):register()
 
 JokerObject:new("ice cream",[[
 {C:chips}+#chips#{} Chips
