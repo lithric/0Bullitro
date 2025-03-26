@@ -19,7 +19,20 @@ function typeof_values(obj,str) return undefined end
 
 ---@alias Position2D {x:number,y:number}
 
----@alias CardAreaName ("discard"|"deck"|"hand"|"joker"|"play"|"title_2"|"title"|"voucher"|"consumeable"|"shop"|"none")
+---@enum (key) CardAreaName
+_G.CardAreaNames = {
+    ["discard"] = true,
+    ["deck"] = true,
+    ["hand"] = true,
+    ["joker"] = true,
+    ["play"] = true,
+    ["title_2"] = true,
+    ["title"] = true,
+    ["voucher"] = true,
+    ["consumeable"] = true,
+    ["shop"] = true,
+    ["none"] = true,
+}
 
 ---@enum (key) EventName
 _G.EventNames = {
@@ -90,42 +103,641 @@ _G.EventNames = {
     ["none"] = true,
 }
 
----@alias CardTypeName ("Default"|"Enhanced"|"Joker"|"Edition"|"Tarot"|"Planet"|"Voucher"|"Spectral"|"Booster"|"Back"|"None")
+---@enum (key) CardTypeName
+_G.CardTypeNames = {
+    ["Default"] = "c_",
+    ["Enhanced"] = "m_",
+    ["Joker"] = "j_",
+    ["Edition"] = "e_",
+    ["Tarot"] = "c_",
+    ["Planet"] = "c_",
+    ["Voucher"] = "v_",
+    ["Spectral"] = "c_",
+    ["Booster"] = "p_",
+    ["Back"] = "b_",
+    ["None"] = "c_",
+}
 
----@alias CardSuitName ("Hearts"|"Clubs"|"Diamonds"|"Spades")
+---@enum (key) CardSuitName
+_G.CardSuitNames = {
+    ["Hearts"] = "Heart",
+    ["Clubs"] = "Club",
+    ["Diamonds"] = "Diamond",
+    ["Spades"] = "Spade",
+}
 
----@alias CardRankName ("2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"|"10"|"Jack"|"Queen"|"King"|"Ace")
+---@enum (key) CardRankName
+_G.CardRankNames = {
+    ["2"] = 2,
+    ["3"] = 3,
+    ["4"] = 4,
+    ["5"] = 5,
+    ["6"] = 6,
+    ["7"] = 7,
+    ["8"] = 8,
+    ["9"] = 9,
+    ["10"] = 10,
+    ["Jack"] = 11,
+    ["Queen"] = 12,
+    ["King"] = 13,
+    ["Ace"] = 14,
+}
 
----@alias PlayingCardTitle ("2 of Hearts"|"3 of Hearts"|"4 of Hearts"|"5 of Hearts"|"6 of Hearts"|"7 of Hearts"|"8 of Hearts"|"9 of Hearts"|"10 of Hearts"|"Jack of Hearts"|"Queen of Hearts"|"King of Hearts"|"Ace of Hearts"|"2 of Clubs"|"3 of Clubs"|"4 of Clubs"|"5 of Clubs"|"6 of Clubs"|"7 of Clubs"|"8 of Clubs"|"9 of Clubs"|"10 of Clubs"|"Jack of Clubs"|"Queen of Clubs"|"King of Clubs"|"Ace of Clubs"|"2 of Diamonds"|"3 of Diamonds"|"4 of Diamonds"|"5 of Diamonds"|"6 of Diamonds"|"7 of Diamonds"|"8 of Diamonds"|"9 of Diamonds"|"10 of Diamonds"|"Jack of Diamonds"|"Queen of Diamonds"|"King of Diamonds"|"Ace of Diamonds"|"2 of Spades"|"3 of Spades"|"4 of Spades"|"5 of Spades"|"6 of Spades"|"7 of Spades"|"8 of Spades"|"9 of Spades"|"10 of Spades"|"Jack of Spades"|"Queen of Spades"|"King of Spades"|"Ace of Spades")
+---@enum (key) CardRankValue
+_G.CardRankValues = {
+    [1] = "Ace",
+    [2] = "2",
+    [3] = "3",
+    [4] = "4",
+    [5] = "5",
+    [6] = "6",
+    [7] = "7",
+    [8] = "8",
+    [9] = "9",
+    [10] = "10",
+    [11] = "Jack",
+    [12] = "Queen",
+    [13] = "King",
+    [14] = "Ace",
+}
 
----@alias CardEffectName ("Base"|"Mult"|"Suit Mult"|"Type Mult"|"Hand Size Mult"|"Hand card double"|"Credit"|"Discard Chips"|"No Discard Mult"|"Stone card hands"|"1 in 10 mult"|"Spawn Tarot"|"Random Mult"|"Socialized Mult"|"Bonus Rerolls"|"Card Mult"|"Steel Card Buff"|"Scary Face Cards"|"Joker Mult"|"Discard dollars"|"Low Card double"|"All face cards"|"Even Card Buff"|"Odd Card Buff"|"Ace Buff"|"Face Card dollar Chance"|"Hand played mult"|"Upgrade Hand chance"|"Hand Size"|"Discard Size"|"Stone Card Buff"|"Bonus dollars"|"dollars for Gold cards"|"Prevent Death"|"Shop size"|"Face card double"|"Set Mult"|"Hand Size, Plays"|"Glass Card"|"Copycat"|"X1.5 Mult club 7"|"Jack Discard Effect"|"X1.5 Mult"|"X2 Mult"|"X3 Mult"|"Tarot Buff"|"Disable Blind Effect"|"Enhance"|"Round Bonus"|"Dollar Doubler"|"Card Removal"|"Card Conversion"|"Joker Payout"|"Suit Conversion"|"Random Joker"|"Hand Upgrade"|"Unlocker"|"Bonus Card"|"Mult Card"|"Wild Card"|"Steel Card"|"Stone Card"|"Gold Card"|"Lucky Card"|"")
+---@enum (key) PlayingCardTitle
+_G.PlayingCardTitles = {
+    ["2 of Hearts"] = "H_2",
+    ["3 of Hearts"] = "H_3",
+    ["4 of Hearts"] = "H_4",
+    ["5 of Hearts"] = "H_5",
+    ["6 of Hearts"] = "H_6",
+    ["7 of Hearts"] = "H_7",
+    ["8 of Hearts"] = "H_8",
+    ["9 of Hearts"] = "H_9",
+    ["10 of Hearts"] = "H_T",
+    ["Jack of Hearts"] = "H_J",
+    ["Queen of Hearts"] = "H_Q",
+    ["King of Hearts"] = "H_K",
+    ["Ace of Hearts"] = "H_A",
+    ["2 of Clubs"] = "C_2",
+    ["3 of Clubs"] = "C_3",
+    ["4 of Clubs"] = "C_4",
+    ["5 of Clubs"] = "C_5",
+    ["6 of Clubs"] = "C_6",
+    ["7 of Clubs"] = "C_7",
+    ["8 of Clubs"] = "C_8",
+    ["9 of Clubs"] = "C_9",
+    ["10 of Clubs"] = "C_T",
+    ["Jack of Clubs"] = "C_J",
+    ["Queen of Clubs"] = "C_Q",
+    ["King of Clubs"] = "C_K",
+    ["Ace of Clubs"] = "C_A",
+    ["2 of Diamonds"] = "D_2",
+    ["3 of Diamonds"] = "D_3",
+    ["4 of Diamonds"] = "D_4",
+    ["5 of Diamonds"] = "D_5",
+    ["6 of Diamonds"] = "D_6",
+    ["7 of Diamonds"] = "D_7",
+    ["8 of Diamonds"] = "D_8",
+    ["9 of Diamonds"] = "D_9",
+    ["10 of Diamonds"] = "D_T",
+    ["Jack of Diamonds"] = "D_J",
+    ["Queen of Diamonds"] = "D_Q",
+    ["King of Diamonds"] = "D_K",
+    ["Ace of Diamonds"] = "D_A",
+    ["2 of Spades"] = "S_2",
+    ["3 of Spades"] = "S_3",
+    ["4 of Spades"] = "S_4",
+    ["5 of Spades"] = "S_5",
+    ["6 of Spades"] = "S_6",
+    ["7 of Spades"] = "S_7",
+    ["8 of Spades"] = "S_8",
+    ["9 of Spades"] = "S_9",
+    ["10 of Spades"] = "S_T",
+    ["Jack of Spades"] = "S_J",
+    ["Queen of Spades"] = "S_Q",
+    ["King of Spades"] = "S_K",
+    ["Ace of Spades"] = "S_A",
+}
 
----@alias CardDefaultTitle "Default Base"
+---@enum (key) CardEffectName
+_G.CardEffectNames = {
+    ["Base"] = true,
+    ["Mult"] = true,
+    ["Suit Mult"] = true,
+    ["Type Mult"] = true,
+    ["Hand Size Mult"] = true,
+    ["Hand card double"] = true,
+    ["Credit"] = true,
+    ["Discard Chips"] = true,
+    ["No Discard Mult"] = true,
+    ["Stone card hands"] = true,
+    ["1 in 10 mult"] = true,
+    ["Spawn Tarot"] = true,
+    ["Random Mult"] = true,
+    ["Socialized Mult"] = true,
+    ["Bonus Rerolls"] = true,
+    ["Card Mult"] = true,
+    ["Steel Card Buff"] = true,
+    ["Scary Face Cards"] = true,
+    ["Joker Mult"] = true,
+    ["Discard dollars"] = true,
+    ["Low Card double"] = true,
+    ["All face cards"] = true,
+    ["Even Card Buff"] = true,
+    ["Odd Card Buff"] = true,
+    ["Ace Buff"] = true,
+    ["Face Card dollar Chance"] = true,
+    ["Hand played mult"] = true,
+    ["Upgrade Hand chance"] = true,
+    ["Hand Size"] = true,
+    ["Discard Size"] = true,
+    ["Stone Card Buff"] = true,
+    ["Bonus dollars"] = true,
+    ["dollars for Gold cards"] = true,
+    ["Prevent Death"] = true,
+    ["Shop size"] = true,
+    ["Face card double"] = true,
+    ["Set Mult"] = true,
+    ["Hand Size, Plays"] = true,
+    ["Glass Card"] = true,
+    ["Copycat"] = true,
+    ["X1.5 Mult club 7"] = true,
+    ["Jack Discard Effect"] = true,
+    ["X1.5 Mult"] = true,
+    ["X2 Mult"] = true,
+    ["X3 Mult"] = true,
+    ["Tarot Buff"] = true,
+    ["Disable Blind Effect"] = true,
+    ["Enhance"] = true,
+    ["Round Bonus"] = true,
+    ["Dollar Doubler"] = true,
+    ["Card Removal"] = true,
+    ["Card Conversion"] = true,
+    ["Joker Payout"] = true,
+    ["Suit Conversion"] = true,
+    ["Random Joker"] = true,
+    ["Hand Upgrade"] = true,
+    ["Unlocker"] = true,
+    ["Bonus Card"] = true,
+    ["Mult Card"] = true,
+    ["Wild Card"] = true,
+    ["Steel Card"] = true,
+    ["Stone Card"] = true,
+    ["Gold Card"] = true,
+    ["Lucky Card"] = true,
+    [""] = true,
+}
 
----@alias CardDefaultName "c_base"
+---@enum (key) CardDefaultTitle
+_G.CardDefaultTitles = {
+    ["Default Base"] = "c_base"
+}
 
----@alias CardJokerTitleStrict ("Joker"|"Greedy Joker"|"Lusty Joker"|"Wrathful Joker"|"Gluttonous Joker"|"Jolly Joker"|"Zany Joker"|"Mad Joker"|"Crazy Joker"|"Droll Joker"|"Sly Joker"|"Wily Joker"|"Clever Joker"|"Devious Joker"|"Crafty Joker"|"Half Joker"|"Joker Stencil"|"Four Fingers"|"Mime"|"Credit Card"|"Ceremonial Dagger"|"Banner"|"Mystic Summit"|"Marble Joker"|"Loyalty Card"|"8 Ball"|"Misprint"|"Dusk"|"Raised Fist"|"Chaos the Clown"|"Fibonacci"|"Steel Joker"|"Scary Face"|"Abstract Joker"|"Delayed Gratification"|"Hack"|"Pareidolia"|"Gros Michel"|"Even Steven"|"Odd Todd"|"Scholar"|"Business Card"|"Supernova"|"Ride the Bus"|"Space Joker"|'Egg'|'Burglar'|'Blackboard'|'Runner'|'Ice Cream'|'DNA'|'Splash'|'Blue Joker'|'Sixth Sense'|'Constellation'|'Hiker'|'Faceless Joker'|'Green Joker'|'Superposition'|'To Do List'|"Cavendish"|"Card Sharp"|"Red Card"|"Madness"|"Square Joker"|"Seance"|"Riff-raff"|"Vampire"|"Shortcut"|"Hologram"|"Vagabond"|"Baron"|"Cloud 9"|"Rocket"|"Obelisk"|"Midas Mask"|"Luchador"|"Photograph"|"Gift Card"|"Turtle Bean"|"Erosion"|"Reserved Parking"|"Mail-In Rebate"|"To the Moon"|"Hallucination"|"Fortune Teller"|"Juggler"|"Drunkard"|"Stone Joker"|"Golden Joker"|"Lucky Cat"|"Baseball Card"|"Bull"|"Diet Cola"|"Trading Card"|"Flash Card"|"Popcorn"|"Spare Trousers"|"Ancient Joker"|"Ramen"|"Walkie Talkie"|"Seltzer"|"Castle"|"Smiley Face"|"Campfire"|"Golden Ticket"|"Mr. Bones"|"Acrobat"|"Sock and Buskin"|"Swashbuckler"|"Troubadour"|"Certificate"|"Smeared Joker"|"Throwback"|"Hanging Chad"|"Rough Gem"|"Bloodstone"|"Arrowhead"|"Onyx Agate"|"Glass Joker"|"Showman"|"Flower Pot"|"Blueprint"|"Wee Joker"|"Merry Andy"|"Oops! All 6s"|"The Idol"|"Seeing Double"|"Matador"|"Hit the Road"|"The Duo"|"The Trio"|"The Family"|"The Order"|"The Tribe"|"Stuntman"|"Invisible Joker"|"Brainstorm"|"Satellite"|"Shoot the Moon"|"Driver's License"|"Cartomancer"|"Astronomer"|"Burnt Joker"|"Bootstraps"|"Caino"|"Triboulet"|"Yorick"|"Chicot"|"Perkeo")
+---@enum (key) CardDefaultName
+_G.CardDefaultNames = {
+    ["c_base"] = "Default Base"
+}
+
+---@enum (key) CardJokerTitleStrict
+_G.CardJokerTitles = {
+    ["Joker"] = "j_joker",
+    ["Greedy Joker"] = "j_greedy_joker",
+    ["Lusty Joker"] = "j_lusty_joker",
+    ["Wrathful Joker"] = "j_wrathful_joker",
+    ["Gluttonous Joker"] = "j_gluttenous_joker",
+    ["Jolly Joker"] = "j_jolly",
+    ["Zany Joker"] = "j_zany",
+    ["Mad Joker"] = "j_mad",
+    ["Crazy Joker"] = "j_crazy",
+    ["Droll Joker"] = "j_droll",
+    ["Sly Joker"] = "j_sly",
+    ["Wily Joker"] = "j_wily",
+    ["Clever Joker"] = "j_clever",
+    ["Devious Joker"] = "j_devious",
+    ["Crafty Joker"] = "j_crafty",
+    ["Half Joker"] = "j_half",
+    ["Joker Stencil"] = "j_stencil",
+    ["Four Fingers"] = "j_four_fingers",
+    ["Mime"] = "j_mime",
+    ["Credit Card"] = "j_credit_card",
+    ["Ceremonial Dagger"] = "j_ceremonial",
+    ["Banner"] = "j_banner",
+    ["Mystic Summit"] = "j_mystic_summit",
+    ["Marble Joker"] = "j_marble",
+    ["Loyalty Card"] = "j_loyalty_card",
+    ["8 Ball"] = "j_8_ball",
+    ["Misprint"] = "j_misprint",
+    ["Dusk"] = "j_dusk",
+    ["Raised Fist"] = "j_raised_fist",
+    ["Chaos the Clown"] = "j_chaos",
+    ["Fibonacci"] = "j_fibonacci",
+    ["Steel Joker"] = "j_steel_joker",
+    ["Scary Face"] = "j_scary_face",
+    ["Abstract Joker"] = "j_abstract",
+    ["Delayed Gratification"] = "j_delayed_grat",
+    ["Hack"] = "j_hack",
+    ["Pareidolia"] = "j_pareidolia",
+    ["Gros Michel"] = "j_gros_michel",
+    ["Even Steven"] = "j_even_steven",
+    ["Odd Todd"] = "j_odd_todd",
+    ["Scholar"] = "j_scholar",
+    ["Business Card"] = "j_business",
+    ["Supernova"] = "j_supernova",
+    ["Ride the Bus"] = "j_ride_the_bus",
+    ["Space Joker"] = "j_space",
+    ['Egg'] = "j_egg",
+    ['Burglar'] = "j_burglar",
+    ['Blackboard'] = "j_blackboard",
+    ['Runner'] = "j_runner",
+    ['Ice Cream'] = "j_ice_cream",
+    ['DNA'] = "j_dna",
+    ['Splash'] = "j_splash",
+    ['Blue Joker'] = "j_blue_joker",
+    ['Sixth Sense'] = "j_sixth_sense",
+    ['Constellation'] = "j_constellation",
+    ['Hiker'] = "j_hiker",
+    ['Faceless Joker'] = "j_faceless",
+    ['Green Joker'] = "j_green_joker",
+    ['Superposition'] = "j_superposition",
+    ['To Do List'] = "j_todo_list",
+    ["Cavendish"] = "j_cavendish",
+    ["Card Sharp"] = "j_card_sharp",
+    ["Red Card"] = "j_red_card",
+    ["Madness"] = "j_madness",
+    ["Square Joker"] = "j_square",
+    ["Seance"] = "j_seance",
+    ["Riff-raff"] = "j_riff_raff",
+    ["Vampire"] = "j_vampire",
+    ["Shortcut"] = "j_shortcut",
+    ["Hologram"] = "j_hologram",
+    ["Vagabond"] = "j_vagabond",
+    ["Baron"] = "j_baron",
+    ["Cloud 9"] = "j_cloud_9",
+    ["Rocket"] = "j_rocket",
+    ["Obelisk"] = "j_obelisk",
+    ["Midas Mask"] = "j_midas_mask",
+    ["Luchador"] = "j_luchador",
+    ["Photograph"] = "j_photograph",
+    ["Gift Card"] = "j_gift",
+    ["Turtle Bean"] = "j_turtle_bean",
+    ["Erosion"] = "j_erosion",
+    ["Reserved Parking"] = "j_reserved_parking",
+    ["Mail-In Rebate"] = "j_mail",
+    ["To the Moon"] = "j_to_the_moon",
+    ["Hallucination"] = "j_hallucination",
+    ["Fortune Teller"] = "j_fortune_teller",
+    ["Juggler"] = "j_juggler",
+    ["Drunkard"] = "j_drunkard",
+    ["Stone Joker"] = "j_stone",
+    ["Golden Joker"] = "j_golden",
+    ["Lucky Cat"] = "j_lucky_cat",
+    ["Baseball Card"] = "j_baseball",
+    ["Bull"] = "j_bull",
+    ["Diet Cola"] = "j_diet_cola",
+    ["Trading Card"] = "j_trading",
+    ["Flash Card"] = "j_flash",
+    ["Popcorn"] = "j_popcorn",
+    ["Spare Trousers"] = "j_trousers",
+    ["Ancient Joker"] = "j_ancient",
+    ["Ramen"] = "j_ramen",
+    ["Walkie Talkie"] = "j_walkie_talkie",
+    ["Seltzer"] = "j_selzer",
+    ["Castle"] = "j_castle",
+    ["Smiley Face"] = "j_smiley",
+    ["Campfire"] = "j_campfire",
+    ["Golden Ticket"] = "j_ticket",
+    ["Mr. Bones"] = "j_mr_bones",
+    ["Acrobat"] = "j_acrobat",
+    ["Sock and Buskin"] = "j_sock_and_buskin",
+    ["Swashbuckler"] = "j_swashbuckler",
+    ["Troubadour"] = "j_troubadour",
+    ["Certificate"] = "j_certificate",
+    ["Smeared Joker"] = "j_smeared",
+    ["Throwback"] = "j_throwback",
+    ["Hanging Chad"] = "j_hanging_chad",
+    ["Rough Gem"] = "j_rough_gem",
+    ["Bloodstone"] = "j_bloodstone",
+    ["Arrowhead"] = "j_arrowhead",
+    ["Onyx Agate"] = "j_onyx_agate",
+    ["Glass Joker"] = "j_glass",
+    ["Showman"] = "j_ring_master",
+    ["Flower Pot"] = "j_flower_pot",
+    ["Blueprint"] = "j_blueprint",
+    ["Wee Joker"] = "j_wee",
+    ["Merry Andy"] = "j_merry_andy",
+    ["Oops! All 6s"] = "j_oops",
+    ["The Idol"] = "j_idol",
+    ["Seeing Double"] = "j_seeing_double",
+    ["Matador"] = "j_matador",
+    ["Hit the Road"] = "j_hit_the_road",
+    ["The Duo"] = "j_duo",
+    ["The Trio"] = "j_trio",
+    ["The Family"] = "j_family",
+    ["The Order"] = "j_order",
+    ["The Tribe"] = "j_tribe",
+    ["Stuntman"] = "j_stuntman",
+    ["Invisible Joker"] = "j_invisible",
+    ["Brainstorm"] = "j_brainstorm",
+    ["Satellite"] = "j_satellite",
+    ["Shoot the Moon"] = "j_shoot_the_moon",
+    ["Driver's License"] = "j_drivers_license",
+    ["Cartomancer"] = "j_cartomancer",
+    ["Astronomer"] = "j_astronomer",
+    ["Burnt Joker"] = "j_burnt",
+    ["Bootstraps"] = "j_bootstraps",
+    ["Caino"] = "j_caino",
+    ["Triboulet"] = "j_triboulet",
+    ["Yorick"] = "j_yorick",
+    ["Chicot"] = "j_chicot",
+    ["Perkeo"] = "j_perkeo",
+}
 ---@alias CardJokerTitle (CardJokerTitleStrict|string)
 
----@alias CardJokerNameStrict ("j_joker"|"j_greedy_joker"|"j_lusty_joker"|"j_wrathful_joker"|"j_gluttenous_joker"|"j_jolly"|"j_zany"|"j_mad"|"j_crazy"|"j_droll"|"j_sly"|"j_wily"|"j_clever"|"j_devious"|"j_crafty"|"j_half"|"j_stencil"|"j_four_fingers"|"j_mime"|"j_credit_card"|"j_ceremonial"|"j_banner"|"j_mystic_summit"|"j_marble"|"j_loyalty_card"|"j_8_ball"|"j_misprint"|"j_dusk"|"j_raised_fist"|"j_chaos"|"j_fibonacci"|"j_steel_joker"|"j_scary_face"|"j_abstract"|"j_delayed_grat"|"j_hack"|"j_pareidolia"|"j_gros_michel"|"j_even_steven"|"j_odd_todd"|"j_scholar"|"j_business"|"j_supernova"|"j_ride_the_bus"|"j_space"|"j_egg"|"j_burglar"|"j_blackboard"|"j_runner"|"j_ice_cream"|"j_dna"|"j_splash"|"j_blue_joker"|"j_sixth_sense"|"j_constellation"|"j_hiker"|"j_faceless"|"j_green_joker"|"j_superposition"|"j_todo_list"|"j_cavendish"|"j_card_sharp"|"j_red_card"|"j_madness"|"j_square"|"j_seance"|"j_riff_raff"|"j_vampire"|"j_shortcut"|"j_hologram"|"j_vagabond"|"j_baron"|"j_cloud_9"|"j_rocket"|"j_obelisk"|"j_midas_mask"|"j_luchador"|"j_photograph"|"j_gift"|"j_turtle_bean"|"j_erosion"|"j_reserved_parking"|"j_mail"|"j_to_the_moon"|"j_hallucination"|"j_fortune_teller"|"j_juggler"|"j_drunkard"|"j_stone"|"j_golden"|"j_lucky_cat"|"j_baseball"|"j_bull"|"j_diet_cola"|"j_trading"|"j_flash"|"j_popcorn"|"j_trousers"|"j_ancient"|"j_ramen"|"j_walkie_talkie"|"j_selzer"|"j_castle"|"j_smiley"|"j_campfire"|"j_ticket"|"j_mr_bones"|"j_acrobat"|"j_sock_and_buskin"|"j_swashbuckler"|"j_troubadour"|"j_certificate"|"j_smeared"|"j_throwback"|"j_hanging_chad"|"j_rough_gem"|"j_bloodstone"|"j_arrowhead"|"j_onyx_agate"|"j_glass"|"j_ring_master"|"j_flower_pot"|"j_blueprint"|"j_wee"|"j_merry_andy"|"j_oops"|"j_idol"|"j_seeing_double"|"j_matador"|"j_hit_the_road"|"j_duo"|"j_trio"|"j_family"|"j_order"|"j_tribe"|"j_stuntman"|"j_invisible"|"j_brainstorm"|"j_satellite"|"j_shoot_the_moon"|"j_drivers_license"|"j_cartomancer"|"j_astronomer"|"j_burnt"|"j_bootstraps"|"j_caino"|"j_triboulet"|"j_yorick"|"j_chicot"|"j_perkeo")
+---@enum (key) CardJokerNameStrict
+_G.CardJokerNames = {
+    ["j_joker"] = "Joker",
+    ["j_greedy_joker"] = "Greedy Joker",
+    ["j_lusty_joker"] = "Lusty Joker",
+    ["j_wrathful_joker"] = "Wrathful Joker",
+    ["j_gluttenous_joker"] = "Gluttonous Joker",
+    ["j_jolly"] = "Jolly Joker",
+    ["j_zany"] = "Zany Joker",
+    ["j_mad"] = "Mad Joker",
+    ["j_crazy"] = "Crazy Joker",
+    ["j_droll"] = "Droll Joker",
+    ["j_sly"] = "Sly Joker",
+    ["j_wily"] = "Wily Joker",
+    ["j_clever"] = "Clever Joker",
+    ["j_devious"] = "Devious Joker",
+    ["j_crafty"] = "Crafty Joker",
+    ["j_half"] = "Half Joker",
+    ["j_stencil"] = "Joker Stencil",
+    ["j_four_fingers"] = "Four Fingers",
+    ["j_mime"] = "Mime",
+    ["j_credit_card"] = "Credit Card",
+    ["j_ceremonial"] = "Ceremonial Dagger",
+    ["j_banner"] = "Banner",
+    ["j_mystic_summit"] = "Mystic Summit",
+    ["j_marble"] = "Marble Joker",
+    ["j_loyalty_card"] = "Loyalty Card",
+    ["j_8_ball"] = "8 Ball",
+    ["j_misprint"] = "Misprint",
+    ["j_dusk"] = "Dusk",
+    ["j_raised_fist"] = "Raised Fist",
+    ["j_chaos"] = "Chaos the Clown",
+    ["j_fibonacci"] = "Fibonacci",
+    ["j_steel_joker"] = "Steel Joker",
+    ["j_scary_face"] = "Scary Face",
+    ["j_abstract"] = "Abstract Joker",
+    ["j_delayed_grat"] = "Delayed Gratification",
+    ["j_hack"] = "Hack",
+    ["j_pareidolia"] = "Pareidolia",
+    ["j_gros_michel"] = "Gros Michel",
+    ["j_even_steven"] = "Even Steven",
+    ["j_odd_todd"] = "Odd Todd",
+    ["j_scholar"] = "Scholar",
+    ["j_business"] = "Business Card",
+    ["j_supernova"] = "Supernova",
+    ["j_ride_the_bus"] = "Ride the Bus",
+    ["j_space"] = "Space Joker",
+    ["j_egg"] = 'Egg',
+    ["j_burglar"] = 'Burglar',
+    ["j_blackboard"] = 'Blackboard',
+    ["j_runner"] = 'Runner',
+    ["j_ice_cream"] = 'Ice Cream',
+    ["j_dna"] = 'DNA',
+    ["j_splash"] = 'Splash',
+    ["j_blue_joker"] = 'Blue Joker',
+    ["j_sixth_sense"] = 'Sixth Sense',
+    ["j_constellation"] = 'Constellation',
+    ["j_hiker"] = 'Hiker',
+    ["j_faceless"] = 'Faceless Joker',
+    ["j_green_joker"] = 'Green Joker',
+    ["j_superposition"] = 'Superposition',
+    ["j_todo_list"] = 'To Do List',
+    ["j_cavendish"] = "Cavendish",
+    ["j_card_sharp"] = "Card Sharp",
+    ["j_red_card"] = "Red Card",
+    ["j_madness"] = "Madness",
+    ["j_square"] = "Square Joker",
+    ["j_seance"] = "Seance",
+    ["j_riff_raff"] = "Riff-raff",
+    ["j_vampire"] = "Vampire",
+    ["j_shortcut"] = "Shortcut",
+    ["j_hologram"] = "Hologram",
+    ["j_vagabond"] = "Vagabond",
+    ["j_baron"] = "Baron",
+    ["j_cloud_9"] = "Cloud 9",
+    ["j_rocket"] = "Rocket",
+    ["j_obelisk"] = "Obelisk",
+    ["j_midas_mask"] = "Midas Mask",
+    ["j_luchador"] = "Luchador",
+    ["j_photograph"] = "Photograph",
+    ["j_gift"] = "Gift Card",
+    ["j_turtle_bean"] = "Turtle Bean",
+    ["j_erosion"] = "Erosion",
+    ["j_reserved_parking"] = "Reserved Parking",
+    ["j_mail"] = "Mail-In Rebate",
+    ["j_to_the_moon"] = "To the Moon",
+    ["j_hallucination"] = "Hallucination",
+    ["j_fortune_teller"] = "Fortune Teller",
+    ["j_juggler"] = "Juggler",
+    ["j_drunkard"] = "Drunkard",
+    ["j_stone"] = "Stone Joker",
+    ["j_golden"] = "Golden Joker",
+    ["j_lucky_cat"] = "Lucky Cat",
+    ["j_baseball"] = "Baseball Card",
+    ["j_bull"] = "Bull",
+    ["j_diet_cola"] = "Diet Cola",
+    ["j_trading"] = "Trading Card",
+    ["j_flash"] = "Flash Card",
+    ["j_popcorn"] = "Popcorn",
+    ["j_trousers"] = "Spare Trousers",
+    ["j_ancient"] = "Ancient Joker",
+    ["j_ramen"] = "Ramen",
+    ["j_walkie_talkie"] = "Walkie Talkie",
+    ["j_selzer"] = "Seltzer",
+    ["j_castle"] = "Castle",
+    ["j_smiley"] = "Smiley Face",
+    ["j_campfire"] = "Campfire",
+    ["j_ticket"] = "Golden Ticket",
+    ["j_mr_bones"] = "Mr. Bones",
+    ["j_acrobat"] = "Acrobat",
+    ["j_sock_and_buskin"] = "Sock and Buskin",
+    ["j_swashbuckler"] = "Swashbuckler",
+    ["j_troubadour"] = "Troubadour",
+    ["j_certificate"] = "Certificate",
+    ["j_smeared"] = "Smeared Joker",
+    ["j_throwback"] = "Throwback",
+    ["j_hanging_chad"] = "Hanging Chad",
+    ["j_rough_gem"] = "Rough Gem",
+    ["j_bloodstone"] = "Bloodstone",
+    ["j_arrowhead"] = "Arrowhead",
+    ["j_onyx_agate"] = "Onyx Agate",
+    ["j_glass"] = "Glass Joker",
+    ["j_ring_master"] = "Showman",
+    ["j_flower_pot"] = "Flower Pot",
+    ["j_blueprint"] = "Blueprint",
+    ["j_wee"] = "Wee Joker",
+    ["j_merry_andy"] = "Merry Andy",
+    ["j_oops"] = "Oops! All 6s",
+    ["j_idol"] = "The Idol",
+    ["j_seeing_double"] = "Seeing Double",
+    ["j_matador"] = "Matador",
+    ["j_hit_the_road"] = "Hit the Road",
+    ["j_duo"] = "The Duo",
+    ["j_trio"] = "The Trio",
+    ["j_family"] = "The Family",
+    ["j_order"] = "The Order",
+    ["j_tribe"] = "The Tribe",
+    ["j_stuntman"] = "Stuntman",
+    ["j_invisible"] = "Invisible Joker",
+    ["j_brainstorm"] = "Brainstorm",
+    ["j_satellite"] = "Satellite",
+    ["j_shoot_the_moon"] = "Shoot the Moon",
+    ["j_drivers_license"] = "Driver's License",
+    ["j_cartomancer"] = "Cartomancer",
+    ["j_astronomer"] = "Astronomer",
+    ["j_burnt"] = "Burnt Joker",
+    ["j_bootstraps"] = "Bootstraps",
+    ["j_caino"] = "Caino",
+    ["j_triboulet"] = "Triboulet",
+    ["j_yorick"] = "Yorick",
+    ["j_chicot"] = "Chicot",
+    ["j_perkeo"] = "Perkeo",
+}
 ---@alias CardJokerName (CardJokerNameStrict|string)
 
----@alias CardTarotTitleStrict ("The Fool"|"The Magician"|"The High Priestess"|"The Empress"|"The Emperor"|"The Hierophant"|"The Lovers"|"The Chariot"|"Justice"|"The Hermit"|"The Wheel of Fortune"|"Strength"|"The Hanged Man"|"Death"|"Temperance"|"The Devil"|"The Tower"|"The Star"|"The Moon"|"The Sun"|"Judgement"|"The World")
+---@enum (key) CardTarotTitleStrict
+_G.CardTarotTitles = {
+    ["The Fool"] = "c_fool",
+    ["The Magician"] = "c_magician",
+    ["The High Priestess"] = "c_high_priestess",
+    ["The Empress"] = "c_empress",
+    ["The Emperor"] = "c_emperor",
+    ["The Hierophant"] = "c_heirophant",
+    ["The Lovers"] = "c_lovers",
+    ["The Chariot"] = "c_chariot",
+    ["Justice"] = "c_justice",
+    ["The Hermit"] = "c_hermit",
+    ["The Wheel of Fortune"] = "c_wheel_of_fortune",
+    ["Strength"] = "c_strength",
+    ["The Hanged Man"] = "c_hanged_man",
+    ["Death"] = "c_death",
+    ["Temperance"] = "c_temperance",
+    ["The Devil"] = "c_devil",
+    ["The Tower"] = "c_tower",
+    ["The Star"] = "c_star",
+    ["The Moon"] = "c_moon",
+    ["The Sun"] = "c_sun",
+    ["Judgement"] = "c_judgement",
+    ["The World"] = "c_world",
+}
 ---@alias CardTarotTitle (CardTarotTitleStrict|string)
 
----@alias CardTarotNameStrict ("c_fool"|"c_magician"|"c_high_priestess"|"c_empress"|"c_emperor"|"c_heirophant"|"c_lovers"|"c_chariot"|"c_justice"|"c_hermit"|"c_wheel_of_fortune"|"c_strength"|"c_hanged_man"|"c_death"|"c_temperance"|"c_devil"|"c_tower"|"c_star"|"c_moon"|"c_sun"|"c_judgement"|"c_world")
+---@enum (key) CardTarotNameStrict
+_G.CardTarotNames = {
+    ["c_fool"] = "The Fool",
+    ["c_magician"] = "The Magician",
+    ["c_high_priestess"] = "The High Priestess",
+    ["c_empress"] = "The Empress",
+    ["c_emperor"] = "The Emperor",
+    ["c_heirophant"] = "The Hierophant",
+    ["c_lovers"] = "The Lovers",
+    ["c_chariot"] = "The Chariot",
+    ["c_justice"] = "Justice",
+    ["c_hermit"] = "The Hermit",
+    ["c_wheel_of_fortune"] = "The Wheel of Fortune",
+    ["c_strength"] = "Strength",
+    ["c_hanged_man"] = "The Hanged Man",
+    ["c_death"] = "Death",
+    ["c_temperance"] = "Temperance",
+    ["c_devil"] = "The Devil",
+    ["c_tower"] = "The Tower",
+    ["c_star"] = "The Star",
+    ["c_moon"] = "The Moon",
+    ["c_sun"] = "The Sun",
+    ["c_judgement"] = "Judgement",
+    ["c_world"] = "The World",
+}
 ---@alias CardTarotName (CardTarotNameStrict|string)
 
----@alias CardPlanetTitleStrict ("Mercury"|"Venus"|"Earth"|"Mars"|"Jupiter"|"Saturn"|"Uranus"|"Neptune"|"Pluto"|"Planet X"|"Ceres"|"Eris")
+---@enum (key) CardPlanetTitleStrict
+_G.CardPlanetTitles = {
+    ["Mercury"] = "c_mercury",
+    ["Venus"] = "c_venus",
+    ["Earth"] = "c_earth",
+    ["Mars"] = "c_mars",
+    ["Jupiter"] = "c_jupiter",
+    ["Saturn"] = "c_saturn",
+    ["Uranus"] = "c_uranus",
+    ["Neptune"] = "c_neptune",
+    ["Pluto"] = "c_pluto",
+    ["Planet X"] = "c_planet_x",
+    ["Ceres"] = "c_ceres",
+    ["Eris"] = "c_eris",
+}
 ---@alias CardPlanetTitle (CardPlanetTitleStrict|string)
 
----@alias CardPlanetNameStrict ("c_mercury"|"c_venus"|"c_earth"|"c_mars"|"c_jupiter"|"c_saturn"|"c_uranus"|"c_neptune"|"c_pluto"|"c_planet_x"|"c_ceres"|"c_eris")
+---@enum (key) CardPlanetNameStrict
+_G.CardPlanetNames = {
+    ["c_mercury"] = "Mercury",
+    ["c_venus"] = "Venus",
+    ["c_earth"] = "Earth",
+    ["c_mars"] = "Mars",
+    ["c_jupiter"] = "Jupiter",
+    ["c_saturn"] = "Saturn",
+    ["c_uranus"] = "Uranus",
+    ["c_neptune"] = "Neptune",
+    ["c_pluto"] = "Pluto",
+    ["c_planet_x"] = "Planet X",
+    ["c_ceres"] = "Ceres",
+    ["c_eris"] = "Eris",
+}
 ---@alias CardPlanetName (CardPlanetNameStrict|string)
 
----@alias CardSpectralTitleStrict ("Familiar"|"Grim"|"Incantation"|"Talisman"|"Aura"|"Wraith"|"Sigil"|"Ouija"|"Ectoplasm"|"Immolate"|"Ankh"|"Deja Vu"|"Hex"|"Trance"|"Medium"|"Cryptid"|"The Soul"|"Black Hole")
+---@enum (key) CardSpectralTitleStrict
+_G.CardSpectralTitles = {
+    ["Familiar"] = "c_familiar",
+    ["Grim"] = "c_grim",
+    ["Incantation"] = "c_incantation",
+    ["Talisman"] = "c_talisman",
+    ["Aura"] = "c_aura",
+    ["Wraith"] = "c_wraith",
+    ["Sigil"] = "c_sigil",
+    ["Ouija"] = "c_ouija",
+    ["Ectoplasm"] = "c_ectoplasm",
+    ["Immolate"] = "c_immolate",
+    ["Ankh"] = "c_ankh",
+    ["Deja Vu"] = "c_deja_vu",
+    ["Hex"] = "c_hex",
+    ["Trance"] = "c_trance",
+    ["Medium"] = "c_medium",
+    ["Cryptid"] = "c_cryptid",
+    ["The Soul"] = "c_soul",
+    ["Black Hole"] = "c_black_hole",
+}
 ---@alias CardSpectralTitle (CardSpectralTitleStrict|string)
 
----@alias CardSpectralNameStrict ("c_familiar"|"c_grim"|"c_incantation"|"c_talisman"|"c_aura"|"c_wraith"|"c_sigil"|"c_ouija"|"c_ectoplasm"|"c_immolate"|"c_ankh"|"c_deja_vu"|"c_hex"|"c_trance"|"c_medium"|"c_cryptid"|"c_soul"|"c_black_hole")
+---@enum (key) CardSpectralNameStrict 
+_G.CardSpectralNames = {
+    ["c_familiar"] = "Familiar",
+    ["c_grim"] = "Grim",
+    ["c_incantation"] = "Incantation",
+    ["c_talisman"] = "Talisman",
+    ["c_aura"] = "Aura",
+    ["c_wraith"] = "Wraith",
+    ["c_sigil"] = "Sigil",
+    ["c_ouija"] = "Ouija",
+    ["c_ectoplasm"] = "Ectoplasm",
+    ["c_immolate"] = "Immolate",
+    ["c_ankh"] = "Ankh",
+    ["c_deja_vu"] = "Deja Vu",
+    ["c_hex"] = "Hex",
+    ["c_trance"] = "Trance",
+    ["c_medium"] = "Medium",
+    ["c_cryptid"] = "Cryptid",
+    ["c_soul"] = "The Soul",
+    ["c_black_hole"] = "Black Hole",
+}
 ---@alias CardSpectralName (CardSpectralNameStrict|string)
 
 ---@alias ConsumeableTitleStrict (CardTarotTitleStrict|CardPlanetTitleStrict|CardSpectralTitleStrict)
@@ -134,50 +746,284 @@ _G.EventNames = {
 ---@alias ConsumeableNameStrict (CardTarotNameStrict|CardPlanetNameStrict|CardSpectralNameStrict)
 ---@alias ConsumeableName (ConsumeableNameStrict|string)
 
----@alias CardVoucherTitleStrict ("Overstock"|"Clearance Sale"|"Hone"|"Reroll Surplus"|"Crystal Ball"|"Telescope"|"Grabber"|"Wasteful"|"Tarot Merchant"|"Planet Merchant"|"Seed Money"|"Blank"|"Magic Trick"|"Hieroglyph"|"Director's Cut"|"Paint Brush"|"Overstock Plus"|"Liquidation"|"Glow Up"|"Reroll Glut"|"Omen Globe"|"Observatory"|"Nacho Tong"|"Recyclomancy"|"Tarot Tycoon"|"Planet Tycoon"|"Money Tree"|"Antimatter"|"Illusion"|"Petroglyph"|"Retcon"|"Palette")
+---@enum (key) CardVoucherTitleStrict
+_G.CardVoucherTitles = {
+    ["Overstock"] = "v_overstock_norm",
+    ["Clearance Sale"] = "v_clearance_sale",
+    ["Hone"] = "v_hone",
+    ["Reroll Surplus"] = "v_reroll_surplus",
+    ["Crystal Ball"] = "v_crystal_ball",
+    ["Telescope"] = "v_telescope",
+    ["Grabber"] = "v_grabber",
+    ["Wasteful"] = "v_wasteful",
+    ["Tarot Merchant"] = "v_tarot_merchant",
+    ["Planet Merchant"] = "v_planet_merchant",
+    ["Seed Money"] = "v_seed_money",
+    ["Blank"] = "v_blank",
+    ["Magic Trick"] = "v_magic_trick",
+    ["Hieroglyph"] = "v_hieroglyph",
+    ["Director's Cut"] = "v_directors_cut",
+    ["Paint Brush"] = "v_paint_brush",
+    ["Overstock Plus"] = "v_overstock_plus",
+    ["Liquidation"] = "v_liquidation",
+    ["Glow Up"] = "v_glow_up",
+    ["Reroll Glut"] = "v_reroll_glut",
+    ["Omen Globe"] = "v_omen_globe",
+    ["Observatory"] = "v_observatory",
+    ["Nacho Tong"] = "v_nacho_tong",
+    ["Recyclomancy"] = "v_recyclomancy",
+    ["Tarot Tycoon"] = "v_tarot_tycoon",
+    ["Planet Tycoon"] = "v_planet_tycoon",
+    ["Money Tree"] = "v_money_tree",
+    ["Antimatter"] = "v_antimatter",
+    ["Illusion"] = "v_illusion",
+    ["Petroglyph"] = "v_petroglyph",
+    ["Retcon"] = "v_retcon",
+    ["Palette"] = "v_palette",
+}
 ---@alias CardVoucherTitle (CardVoucherTitleStrict|string)
 
----@alias CardVoucherNameStrict ("v_overstock_norm"|"v_clearance_sale"|"v_hone"|"v_reroll_surplus"|"v_crystal_ball"|"v_telescope"|"v_grabber"|"v_wasteful"|"v_tarot_merchant"|"v_planet_merchant"|"v_seed_money"|"v_blank"|"v_magic_trick"|"v_hieroglyph"|"v_directors_cut"|"v_paint_brush"|"v_overstock_plus"|"v_liquidation"|"v_glow_up"|"v_reroll_glut"|"v_omen_globe"|"v_observatory"|"v_nacho_tong"|"v_recyclomancy"|"v_tarot_tycoon"|"v_planet_tycoon"|"v_money_tree"|"v_antimatter"|"v_illusion"|"v_petroglyph"|"v_retcon"|"v_palette")
+---@enum (key) CardVoucherNameStrict
+_G.CardVoucherNames = {
+    ["v_overstock_norm"] = "Overstock",
+    ["v_clearance_sale"] = "Clearance Sale",
+    ["v_hone"] = "Hone",
+    ["v_reroll_surplus"] = "Reroll Surplus",
+    ["v_crystal_ball"] = "Crystal Ball",
+    ["v_telescope"] = "Telescope",
+    ["v_grabber"] = "Grabber",
+    ["v_wasteful"] = "Wasteful",
+    ["v_tarot_merchant"] = "Tarot Merchant",
+    ["v_planet_merchant"] = "Planet Merchant",
+    ["v_seed_money"] = "Seed Money",
+    ["v_blank"] = "Blank",
+    ["v_magic_trick"] = "Magic Trick",
+    ["v_hieroglyph"] = "Hieroglyph",
+    ["v_directors_cut"] = "Director's Cut",
+    ["v_paint_brush"] = "Paint Brush",
+    ["v_overstock_plus"] = "Overstock Plus",
+    ["v_liquidation"] = "Liquidation",
+    ["v_glow_up"] = "Glow Up",
+    ["v_reroll_glut"] = "Reroll Glut",
+    ["v_omen_globe"] = "Omen Globe",
+    ["v_observatory"] = "Observatory",
+    ["v_nacho_tong"] = "Nacho Tong",
+    ["v_recyclomancy"] = "Recyclomancy",
+    ["v_tarot_tycoon"] = "Tarot Tycoon",
+    ["v_planet_tycoon"] = "Planet Tycoon",
+    ["v_money_tree"] = "Money Tree",
+    ["v_antimatter"] = "Antimatter",
+    ["v_illusion"] = "Illusion",
+    ["v_petroglyph"] = "Petroglyph",
+    ["v_retcon"] = "Retcon",
+    ["v_palette"] = "Palette",
+}
 ---@alias CardVoucherName (CardVoucherNameStrict|string)
 
----@alias CardDeckTitleStrict ("Red Deck"|"Blue Deck"|"Yellow Deck"|"Green Deck"|"Black Deck"|"Magic Deck"|"Nebula Deck"|"Ghost Deck"|"Abandoned Deck"|"Checkered Deck"|"Zodiac Deck"|"Painted Deck"|"Anaglyph Deck"|"Plasma Deck"|"Erratic Deck"|"Challenge Deck")
+---@enum (key) CardDeckTitleStrict
+_G.CardDeckTitles = { 
+    ["Red Deck"] = "b_red",
+    ["Blue Deck"] = "b_blue",
+    ["Yellow Deck"] = "b_yellow",
+    ["Green Deck"] = "b_green",
+    ["Black Deck"] = "b_black",
+    ["Magic Deck"] = "b_magic",
+    ["Nebula Deck"] = "b_nebula",
+    ["Ghost Deck"] = "b_ghost",
+    ["Abandoned Deck"] = "b_abandoned",
+    ["Checkered Deck"] = "b_checkered",
+    ["Zodiac Deck"] = "b_zodiac",
+    ["Painted Deck"] = "b_painted",
+    ["Anaglyph Deck"] = "b_anaglyph",
+    ["Plasma Deck"] = "b_plasma",
+    ["Erratic Deck"] = "b_erratic",
+    ["Challenge Deck"] = "b_challenge",
+}
 ---@alias CardDeckTitle (CardDeckTitleStrict|string)
 
----@alias CardDeckNameStrict ("b_red"|"b_blue"|"b_yellow"|"b_green"|"b_black"|"b_magic"|"b_nebula"|"b_ghost"|"b_abandoned"|"b_checkered"|"b_zodiac"|"b_painted"|"b_anaglyph"|"b_plasma"|"b_erratic"|"b_challenge")
+---@enum (key) CardDeckNameStrict
+_G.CardDeckNames = { 
+    ["b_red"] = "Red Deck",
+    ["b_blue"] = "Blue Deck",
+    ["b_yellow"] = "Yellow Deck",
+    ["b_green"] = "Green Deck",
+    ["b_black"] = "Black Deck",
+    ["b_magic"] = "Magic Deck",
+    ["b_nebula"] = "Nebula Deck",
+    ["b_ghost"] = "Ghost Deck",
+    ["b_abandoned"] = "Abandoned Deck",
+    ["b_checkered"] = "Checkered Deck",
+    ["b_zodiac"] = "Zodiac Deck",
+    ["b_painted"] = "Painted Deck",
+    ["b_anaglyph"] = "Anaglyph Deck",
+    ["b_plasma"] = "Plasma Deck",
+    ["b_erratic"] = "Erratic Deck",
+    ["b_challenge"] = "Challenge Deck",
+}
 ---@alias CardDeckName (CardDeckNameStrict|string)
 
----@alias CardEnhancementTitleStrict ("Bonus"|"Mult"|"Wild Card"|"Glass Card"|"Steel Card"|"Stone Card"|"Gold Card"|"Lucky Card")
+---@enum (key) CardEnhancementTitleStrict
+_G.CardEnhancementTitles = { 
+    ["Bonus"] = "m_bonus",
+    ["Mult"] = "m_mult",
+    ["Wild Card"] = "m_wild",
+    ["Glass Card"] = "m_glass",
+    ["Steel Card"] = "m_steel",
+    ["Stone Card"] = "m_stone",
+    ["Gold Card"] = "m_gold",
+    ["Lucky Card"] = "m_lucky",
+}
 ---@alias CardEnhancementTitle (CardEnhancementTitleStrict|string)
 
----@alias CardEnhancementNameStrict ("m_bonus"|"m_mult"|"m_wild"|"m_glass"|"m_steel"|"m_stone"|"m_gold"|"m_lucky")
+---@enum (key) CardEnhancementNameStrict
+_G.CardEnhancementNames = { 
+    ["m_bonus"] = "Bonus",
+    ["m_mult"] = "Mult",
+    ["m_wild"] = "Wild Card",
+    ["m_glass"] = "Glass Card",
+    ["m_steel"] = "Steel Card",
+    ["m_stone"] = "Stone Card",
+    ["m_gold"] = "Gold Card",
+    ["m_lucky"] = "Lucky Card",
+}
 ---@alias CardEnhancementName (CardEnhancementNameStrict|string)
 
----@alias CardEditionTitleStrict ("Base"|"Foil"|"Holographic"|"Polychrome"|"Negative")
+---@enum (key) CardEditionTitleStrict
+_G.CardEditionTitles = { 
+    ["Base"] = "e_base",
+    ["Foil"] = "e_foil",
+    ["Holographic"] = "e_holo",
+    ["Polychrome"] = "e_polychrome",
+    ["Negative"] = "e_negative",
+}
 ---@alias CardEditionTitle (CardEditionTitleStrict|string)
 
----@alias CardEditionNameStrict ("e_base"|"e_foil"|"e_holo"|"e_polychrome"|"e_negative")
+---@enum (key) CardEditionNameStrict
+_G.CardEditionNames = { 
+    ["e_base"] = "Base",
+    ["e_foil"] = "Foil",
+    ["e_holo"] = "Holographic",
+    ["e_polychrome"] = "Polychrome",
+    ["e_negative"] = "Negative",
+}
 ---@alias CardEditionName (CardEditionNameStrict|string)
 
----@alias CardBoosterTitleStrict ("Arcana Pack"|"Jumbo Arcana Pack"|"Mega Arcana Pack"|"Celestial Pack"|"Jumbo Celestial Pack"|"Mega Celestial Pack"|"Spectral Pack"|"Jumbo Spectral Pack"|"Mega Spectral Pack"|"Standard Pack"|"Jumbo Standard Pack"|"Mega Standard Pack"|"Buffoon Pack"|"Jumbo Buffoon Pack"|"Mega Buffoon Pack")
+---@enum (key) CardBoosterTitleStrict
+_G.CardBoosterTitles = {
+    ["Arcana Pack"] = "p_arcana_normal",
+    ["Jumbo Arcana Pack"] = "p_arcana_jumbo",
+    ["Mega Arcana Pack"] = "p_arcana_mega",
+    ["Celestial Pack"] = "p_celestial_normal",
+    ["Jumbo Celestial Pack"] = "p_celestial_jumbo",
+    ["Mega Celestial Pack"] = "p_celestial_mega",
+    ["Spectral Pack"] = "p_spectral_normal",
+    ["Jumbo Spectral Pack"] = "p_spectral_jumbo",
+    ["Mega Spectral Pack"] = "p_spectral_mega",
+    ["Standard Pack"] = "p_standard_normal",
+    ["Jumbo Standard Pack"] = "p_standard_jumbo",
+    ["Mega Standard Pack"] = "p_standard_mega",
+    ["Buffoon Pack"] = "p_buffoon_normal",
+    ["Jumbo Buffoon Pack"] = "p_buffoon_jumbo",
+    ["Mega Buffoon Pack"] = "p_buffoon_mega",
+}
 ---@alias CardBoosterTitle (CardBoosterTitleStrict|string)
 
----@alias CardBoosterNameStrict ("p_arcana_normal_1"|"p_arcana_normal_2"|"p_arcana_normal_3"|"p_arcana_normal_4"|"p_arcana_jumbo_1"|"p_arcana_jumbo_2"|"p_arcana_mega_1"|"p_arcana_mega_2"|"p_celestial_normal_1"|"p_celestial_normal_2"|"p_celestial_normal_3"|"p_celestial_normal_4"|"p_celestial_jumbo_1"|"p_celestial_jumbo_2"|"p_celestial_mega_1"|"p_celestial_mega_2"|"p_spectral_normal_1"|"p_spectral_normal_2"|"p_spectral_jumbo_1"|"p_spectral_mega_1"|"p_standard_normal_1"|"p_standard_normal_2"|"p_standard_normal_3"|"p_standard_normal_4"|"p_standard_jumbo_1"|"p_standard_jumbo_2"|"p_standard_mega_1"|"p_standard_mega_2"|"p_buffoon_normal_1"|"p_buffoon_normal_2"|"p_buffoon_jumbo_1"|"p_buffoon_mega_1")
+---@enum (key) CardBoosterNameStrict
+_G.CardBoosterNames = { 
+    ["p_arcana_normal_1"] = "Arcana Pack",
+    ["p_arcana_normal_2"] = "Arcana Pack",
+    ["p_arcana_normal_3"] = "Arcana Pack",
+    ["p_arcana_normal_4"] = "Arcana Pack",
+    ["p_arcana_jumbo_1"] = "Jumbo Arcana Pack",
+    ["p_arcana_jumbo_2"] = "Jumbo Arcana Pack",
+    ["p_arcana_mega_1"] = "Mega Arcana Pack",
+    ["p_arcana_mega_2"] = "Mega Arcana Pack",
+    ["p_celestial_normal_1"] = "Celestial Pack",
+    ["p_celestial_normal_2"] = "Celestial Pack",
+    ["p_celestial_normal_3"] = "Celestial Pack",
+    ["p_celestial_normal_4"] = "Celestial Pack",
+    ["p_celestial_jumbo_1"] = "Jumbo Celestial Pack",
+    ["p_celestial_jumbo_2"] = "Jumbo Celestial Pack",
+    ["p_celestial_mega_1"] = "Mega Celestial Pack",
+    ["p_celestial_mega_2"] = "Mega Celestial Pack",
+    ["p_spectral_normal_1"] = "Spectral Pack",
+    ["p_spectral_normal_2"] = "Spectral Pack",
+    ["p_spectral_jumbo_1"] = "Jumbo Spectral Pack",
+    ["p_spectral_mega_1"] = "Mega Spectral Pack",
+    ["p_standard_normal_1"] = "Standard Pack",
+    ["p_standard_normal_2"] = "Standard Pack",
+    ["p_standard_normal_3"] = "Standard Pack",
+    ["p_standard_normal_4"] = "Standard Pack",
+    ["p_standard_jumbo_1"] = "Jumbo Standard Pack",
+    ["p_standard_jumbo_2"] = "Jumbo Standard Pack",
+    ["p_standard_mega_1"] = "Mega Standard Pack",
+    ["p_standard_mega_2"] = "Mega Standard Pack",
+    ["p_buffoon_normal_1"] = "Buffoon Pack",
+    ["p_buffoon_normal_2"] = "Buffoon Pack",
+    ["p_buffoon_jumbo_1"] = "Jumbo Buffoon Pack",
+    ["p_buffoon_mega_1"] = "Mega Buffoon Pack",
+}
 ---@alias CardBoosterName (CardBoosterNameStrict|string)
 
----@alias CardExtraName ("soul"|"undiscovered_joker"|"undiscovered_tarot")
+---@enum (key) CardExtraName 
+_G.CardExtraNames = {
+    ["soul"] = true,
+    ["undiscovered_joker"] = true,
+    ["undiscovered_tarot"] = true,
+}
 
 ---@alias CardTitleStrict (CardDefaultTitle|CardTarotTitleStrict|CardPlanetTitleStrict|CardSpectralTitleStrict|CardVoucherTitleStrict|CardDeckTitleStrict|CardEnhancementTitleStrict|CardEditionTitleStrict|CardBoosterTitleStrict|CardJokerTitleStrict)
 ---@alias CardTitle (CardTitleStrict|string)
 
 ---@alias CardName (CardNameStrict|string)
 
----@alias CardSealName ("Gold"|"Red"|"Blue"|"Purple")
+---@enum (key) CardSealNameStrict
+_G.CardSealNames = {
+    ["Gold"] = true,
+    ["Red"] = true,
+    ["Blue"] = true,
+    ["Purple"] = true,
+}
+---@alias CardSealName (CardSealNameStrict|string)
 
----@alias CardBoosterKindName ("Arcana"|"Spectral"|"Celestial"|"Standard"|"Buffoon")
+---@enum (key) CardBoosterKindName 
+_G.CardBoosterKindNames = {
+    ["Arcana"] = true,
+    ["Spectral"] = true,
+    ["Celestial"] = true,
+    ["Standard"] = true,
+    ["Buffoon"] = true,
+}
 
----@alias PokerHandName ("High Card"|"Pair"|"Two Pair"|"Three of a Kind"|"Straight"|"Flush"|"Four of a Kind"|"Full House"|"Straight Flush"|"Five of a Kind"|"Flush House"|"Flush Five")
+---@enum (key) PokerHandName
+_G.PokerHandNames = {
+    ["High Card"] = true,
+    ["Pair"] = true,
+    ["Two Pair"] = true,
+    ["Three of a Kind"] = true,
+    ["Straight"] = true,
+    ["Flush"] = true,
+    ["Four of a Kind"] = true,
+    ["Full House"] = true,
+    ["Straight Flush"] = true,
+    ["Five of a Kind"] = true,
+    ["Flush House"] = true,
+    ["Flush Five"] = true,
+}
 
----@alias TagEffectTimingName ('store_joker_create'|'store_joker_modify'|'eval'|'voucher_add'|'new_blind_choice'|'immediate'|'shop_final_pass'|'tag_add'|'round_start_bonus'|'shop_start')
+---@alias TagEffectTimingName 
+_G.TagEffectTimingNames = {
+    ['store_joker_create'] = true,
+    ['store_joker_modify'] = true,
+    ['eval'] = true,
+    ['voucher_add'] = true,
+    ['new_blind_choice'] = true,
+    ['immediate'] = true,
+    ['shop_final_pass'] = true,
+    ['tag_add'] = true,
+    ['round_start_bonus'] = true,
+    ['shop_start'] = true,
+}
 
 ---@enum (key) AbilityName
 _G.AbilityNames = {

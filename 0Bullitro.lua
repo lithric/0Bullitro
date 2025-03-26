@@ -1527,8 +1527,8 @@ function JokerObject:evalEventListeners()
       if not val or val == 0 then return nil end
       if not target or target == "" then return nil end
       card:tug(target,-val)
-      if card:get(target) <= 0 and card:get("joker_effect_hint") == "Green Joker" then
-         card:set(target,0)
+      if card:get(target) <= AbilityNames[target] and tostring(card:get("joker_effect_hint")):match("Green Joker") then
+         card:set(target,AbilityNames[target])
          print("ok")
       end
    end)
@@ -1587,22 +1587,22 @@ function JokerObject:evalEventListeners()
                if key:match("_minus$") then val = -val end
                card:tug(w,val)
             end
-            if card:get("joker_effect_hint") == "Turtle Bean" then
+            if tostring(card:get("joker_effect_hint")):match("Turtle Bean") then
                if card:get("h_size") <= 0 then
                   card.object:start_dissolve()
                end
             end
-            if card:get("joker_effect_hint") == "Ice Cream" then
+            if tostring(card:get("joker_effect_hint")):match("Ice Cream") then
                if card:get("chips") <= 0 then
                   card.object:start_dissolve()
                end
             end
-            if card:get("joker_effect_hint") == "Popcorn" then
+            if tostring(card:get("joker_effect_hint")):match("Popcorn") then
                if card:get("mult") <= 0 then
                   card.object:start_dissolve()
                end
             end
-            if card:get("joker_effect_hint") == "Ramen" then
+            if tostring(card:get("joker_effect_hint")):match("Ramen") then
                if card:get("x_mult") <= 0 then
                   card.object:start_dissolve()
                end
@@ -1667,7 +1667,7 @@ function JokerObject:setup()
 end
 
 ---comment
----@param joker_name string?
+---@param joker_name (CardJokerName|CardJokerTitle)?
 ---@param ignore table?
 ---@return nil
 function JokerObject:override(joker_name,ignore)
@@ -1713,10 +1713,19 @@ function JokerObject:override(joker_name,ignore)
          override_object[k] = v
       end
    end
-   if override_object.config then
-      table.implement(override_object.config,G.P_CENTERS["j_"..joker_name:lower():gsub(" ","_")].config)
+   if G.P_CENTERS[joker_name] then
+      joker_name = joker_name
+   elseif G.P_CENTERS[CardJokerTitles[joker_name]] then
+      joker_name = CardJokerTitles[joker_name]
+   elseif G.P_CENTERS["j_"..joker_name:lower():gsub(" ","_")] then
+      joker_name = "j_"..joker_name:lower():gsub(" ","_")
+   else
+      error("trying to override bullshit joker name")
    end
-   SMODS.Joker:take_ownership("j_"..joker_name:lower():gsub(" ","_"),override_object)
+   if override_object.config then
+      table.implement(override_object.config,G.P_CENTERS[joker_name].config)
+   end
+   SMODS.Joker:take_ownership(joker_name,override_object)
 end
 
 function JokerObject:register(config)
@@ -1749,6 +1758,9 @@ function JokerObject:register(config)
    local atlas_entry = {}
    atlas_entry.key = sprite_sheet_name and "Sprites-"..sprite_sheet_name or "Jokers-"..name
    atlas_entry.path = sprite_sheet_name and "Sprites-"..sprite_sheet_name..".png" or "Jokers-"..name..".png"
+   if not ImageHandler.file_exists(atlas_entry.path) then
+      atlas_entry.path = "Jokers-DEFAULT.png"
+   end
    
    if self.size == "default" then
        atlas_entry.px = 71
@@ -1806,34 +1818,60 @@ JokerObject:new("Greedy Joker",[[
 Played cards with
 {C:diamonds}#suit#{} suit give
 {C:mult}+#s_mult#{} Mult when scored
-]]):set_attributes({s_mult=3,suit="Diamonds"}):override()
+]]):set_attributes({s_mult=3,suit="Diamonds",effect="Suit Mult"}):override()
+
+JokerObject:new("Lusty Joker",[[
+Played cards with
+{C:hearts}#suit#{} suit give
+{C:mult}+#s_mult#{} Mult when scored
+]]):set_attributes({s_mult=3,suit="Hearts",effect="Suit Mult"}):override()
+
+JokerObject:new("Wrathful Joker",[[
+Played cards with
+{C:spades}#suit#{} suit give
+{C:mult}+#s_mult#{} Mult when scored
+]]):set_attributes({s_mult=3,suit="Spades",effect="Suit Mult"}):override()
+
+JokerObject:new("Gluttonous Joker",[[
+Played cards with
+{C:club}#suit#{} suit give
+{C:mult}+#s_mult#{} Mult when scored
+]]):set_attributes({s_mult=3,suit="Clubs",effect="Suit Mult"}):override()
 
 JokerObject:new("Jolly Joker",[[
 {C:mult}+#t_mult#{} Mult if played
 hand contains
 a {C:attention}#type#{}
-]]):set_attributes({t_mult=8,type="Pair"}):override("Jolly")
+]]):set_attributes({t_mult=8,type="Pair"}):override()
 
 JokerObject:new("Turtle Bean",[[
 {C:attention}+#h_size#{} hand size,
 reduces by {C:red}#h_size_mod_minus#{}
 each round
-]]):set_attributes({h_size = 5,h_size_mod_minus = 1, mod_timing = "on_round_end", joker_effect_hint = "Turtle Bean"}):register()
+]]):set_attributes({h_size = 5,h_size_mod_minus = 1, mod_timing = "on_round_end", joker_effect_hint = "Turtle Bean"}):override()
 
-JokerObject:new("ice cream",[[
+JokerObject:new("Ice Cream",[[
 {C:chips}+#chips#{} Chips
 {C:chips}-#chip_mod_minus#{} Chips for
 every hand played
-]]):set_attributes({chips = 100, chip_mod_minus = 5, mod_timing = "on_play_discard_end", joker_effect_hint = "Ice Cream"}):register()
+]]):set_attributes({chips = 100, chip_mod_minus = 5, mod_timing = "on_play_discard_end", joker_effect_hint = "Ice Cream"}):override()
 
-JokerObject:new("popcorn",[[
+JokerObject:new("Popcorn",[[
 this is a popcorn #mult#
-]]):set_attributes({mult = 20, mult_mod_minus = 4, mod_timing = "on_play_discard_end", joker_effect_hint = "Popcorn"}):register()
+]]):set_attributes({mult = 20, mult_mod_minus = 4, mod_timing = "on_play_discard_end", joker_effect_hint = "Popcorn"}):override()
 
-JokerObject:new("ramen",[[
+JokerObject:new("Ramen",[[
 this is a ramen #x_mult#
-]]):set_attributes({x_mult = 2, x_mult_mod_minus = 0.01, mod_timing = "on_discard_card", joker_effect_hint = "Ramen"}):register()
+]]):set_attributes({x_mult = 2, x_mult_mod_minus = 0.01, mod_timing = "on_discard_card", joker_effect_hint = "Ramen"}):override()
 
-JokerObject:new("green guy",[[
+JokerObject:new("Green Joker",[[
 this is a green gui #mult#
-]]):set_attributes({mult = 0, hand_add = 1, discard_sub = 1, target = "mult", joker_effect_hint = "Green Joker"}):register()
+]]):set_attributes({mult = 0, hand_add = 1, discard_sub = 1, target = "mult", joker_effect_hint = "Green Joker"}):override()
+
+
+JokerObject:new("Test Joker",[[
+This Joker gains {C:mult}X#hand_add#{} Mult
+for every hand played and loses
+{C:mult}-X#discard_sub#{} for every hand discarded
+(Currently {C:mult}X#x_mult#{} Mult)
+]]):set_attributes({x_mult = 1, hand_add = 0.05, discard_sub = 0.05,target = "x_mult", joker_effect_hint="Green Joker"}):register()
