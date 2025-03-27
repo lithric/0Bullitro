@@ -97,7 +97,7 @@ _G.remove_noops = function(obj,noop_condition,noop_func)
     if type(obj) ~= "table" then return nil end -- non-table handled
     if table.kcount(obj,function()return true end) == 0 then return nil end -- empty table handled
     if table.kcount(obj,function()return true end) == 1 and obj.extra ~= nil then return remove_noops(obj.extra) end -- redundant table handled
-    if noop_condition(obj) then return remove_noops(noop_func(obj),noop_condition,noop_func) end -- extra conditions handled
+    if noop_condition(obj,noop_condition,noop_func) then return remove_noops(noop_func(obj,noop_condition,noop_func),noop_condition,noop_func) end -- extra conditions handled
     if not obj.extra then return obj end -- single-op table handled (base case)
     obj.extra = remove_noops(obj.extra) -- do the same for the extra tables
     return obj
@@ -133,16 +133,32 @@ _G.combine_return = function(base,more)
    local final_return = base
    if base.extra then
        base.extra = safetable(base.extra)
-       final_return.extra = safetable(combine_return(base.extra,more))
+       local tbl = combine_return(base.extra,more)
+       if not tbl then
+        final_return.extra = nil
+       else
+        final_return.extra = safetable(tbl)
+       end
    else
        final_return.extra = more
    end
    final_return = remove_noops(final_return,function(tbl)
-        return table.ksome(tbl,function(v,k) return v == AbilityNames[k] and tonumber(AbilityNames[k]) and true or false end)
-    end,function(tbl)
+        return table.ksome(tbl,function(v,k) return v == AbilityNames[k] and tonumber(AbilityNames[k]) and true or false end) or
+            (tbl.extra ~= nil and tbl.card ~= nil and table.kcount(tbl) == 2) or
+            (tbl.card ~= nil and table.kcount(tbl) == 1)
+    end,function(tbl,cond,this)
         for k,v in pairs(tbl) do
             if v == AbilityNames[k] and tonumber(AbilityNames[k]) then
                 tbl[k] = nil
+            end
+        end
+        if not tbl.extra and table.kcount(tbl) == 1 then
+            tbl.card = nil
+        elseif tbl.extra and tbl.card and table.kcount(tbl) == 2 then
+            tbl.extra = remove_noops(tbl.extra,cond,this)
+            if tbl.extra == nil then 
+                tbl.card = nil 
+                tbl = nil
             end
         end
         return tbl

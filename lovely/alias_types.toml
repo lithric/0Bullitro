@@ -1011,7 +1011,7 @@ _G.PokerHandNames = {
     ["Flush Five"] = true,
 }
 
----@alias TagEffectTimingName 
+---@enum (key) TagEffectTimingName 
 _G.TagEffectTimingNames = {
     ['store_joker_create'] = true,
     ['store_joker_modify'] = true,
