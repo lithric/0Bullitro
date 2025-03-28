@@ -62,12 +62,14 @@ _G.numer = function(object)
 end
 
 
-_G.dump = function(o)
+_G.dump = function(o,depth)
+    if not depth then depth = 255 end
+    if depth == 0 then return "" end
     if type(o) == 'table' then
         local s = '{ '
         for k,v in pairs(o) do
             if type(k) ~= 'number' then k = '"'..k..'"' end
-            s = s .. '['..k..'] = ' .. dump(v) .. ','
+            s = s .. '['..k..'] = ' .. dump(v,depth-1) .. ','
         end
         return s .. '} '
     else
@@ -92,8 +94,8 @@ _G.wrapnumber = function(num,first_bound,second_bound)
 end
 
 _G.remove_noops = function(obj,noop_condition,noop_func)
-    if not noop_condition then noop_condition = function(v) return false end end
-    if not noop_func then noop_func = function(v) return nil end end
+    if not noop_condition then noop_condition = function(v,cond,func) return false end end
+    if not noop_func then noop_func = function(v,cond,func) return nil end end
     if type(obj) ~= "table" then return nil end -- non-table handled
     if table.kcount(obj,function()return true end) == 0 then return nil end -- empty table handled
     if table.kcount(obj,function()return true end) == 1 and obj.extra ~= nil then return remove_noops(obj.extra) end -- redundant table handled

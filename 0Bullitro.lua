@@ -1,3 +1,4 @@
+
 _G.FFI = require("ffi")
 
 ---@alias RGBA [number,number,number,number]
@@ -1248,12 +1249,12 @@ function JokerObject:init(name,text)
       eternal_compat = true,
       perishable_compat = true,
       config = GameObjectData:new(),
-      loc_vars = function() end,
-      calculate = function() end,
-      in_pool = function() end,
-      remove_from_deck = function() end,
-      add_to_deck = function() end,
-      calc_dollar_bonus = function() end,
+      loc_vars = nil, -- functions
+      calculate = nil, -- functions
+      in_pool = nil, -- functions
+      remove_from_deck = nil, -- functions
+      add_to_deck = nil, -- functions
+      calc_dollar_bonus = nil, -- functions
       pixel_size = {w = 71, h = 95},
       display_size = {w = 71, h = 95},
    }
@@ -1832,42 +1833,42 @@ JokerObject.addEventListener = Object.addEventListener
 --Complete!
 JokerObject:new("Joker",[[
 {C:mult}+#mult#{} Mult
-]]):set_attributes({mult=4}):override()
+]]):set_attributes({mult=4})--:override()
 
 ---Complete!
 JokerObject:new("Greedy Joker",[[
 Played cards with
 {C:diamonds}#suit#{} suit give
 {C:mult}+#s_mult#{} Mult when scored
-]]):set_attributes({s_mult=3,suit="Diamonds",effect="Suit Mult",shake=1}):override()
+]]):set_attributes({s_mult=3,suit="Diamonds",effect="Suit Mult",shake=1})--:override()
 
 ---Complete!
 JokerObject:new("Lusty Joker",[[
 Played cards with
 {C:hearts}#suit#{} suit give
 {C:mult}+#s_mult#{} Mult when scored
-]]):set_attributes({s_mult=3,suit="Hearts",effect="Suit Mult"}):override()
+]]):set_attributes({s_mult=3,suit="Hearts",effect="Suit Mult"})--:override()
 
 ---Complete!
 JokerObject:new("Wrathful Joker",[[
 Played cards with
 {C:spades}#suit#{} suit give
 {C:mult}+#s_mult#{} Mult when scored
-]]):set_attributes({s_mult=3,suit="Spades",effect="Suit Mult"}):override()
+]]):set_attributes({s_mult=3,suit="Spades",effect="Suit Mult"})--:override()
 
 ---Complete!
 JokerObject:new("Gluttonous Joker",[[
 Played cards with
 {C:club}#suit#{} suit give
 {C:mult}+#s_mult#{} Mult when scored
-]]):set_attributes({s_mult=3,suit="Clubs",effect="Suit Mult"}):override()
+]]):set_attributes({s_mult=3,suit="Clubs",effect="Suit Mult"})--:override()
 
 ---Test
 JokerObject:new("Jolly Joker",[[
 {C:mult}+#t_mult#{} Mult if played
 hand contains
 a {C:attention}#type#{}
-]]):set_attributes({t_mult=8,type="Pair"}):override()
+]]):set_attributes({t_mult=8,type="Pair"})--:override()
 
 JokerObject:new("Turtle Bean",[[
 {C:attention}+#h_size#{} hand size,
@@ -1889,7 +1890,7 @@ JokerObject:new("Ramen",[[
 {X:mult,C:white}X#x_mult#{} Mult, loses
 {X:mult,C:white}X#x_mult_mod_minus#{} Mult
 per {C:attention}card{} discarded
-]]):set_attributes({x_mult = 2, x_mult_mod_minus = 0.01, mod_timing = "on_discard_card", joker_effect_hint = "Ramen"}):override()
+]]):set_attributes({x_mult = 2, x_mult_mod_minus = 0.01, mod_timing = "on_discard_card", joker_effect_hint = "Ramen"})--:register()
 
 JokerObject:new("Green Joker",[[
 this is a green gui #mult#

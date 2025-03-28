@@ -741,7 +741,7 @@ _G.CardSpectralNames = {
 ---@alias CardSpectralName (CardSpectralNameStrict|string)
 
 ---@alias ConsumeableTitleStrict (CardTarotTitleStrict|CardPlanetTitleStrict|CardSpectralTitleStrict)
----@alias ConumeableTitle (ConsumeableTitleStrict|string)
+---@alias ConsumeableTitle (ConsumeableTitleStrict|string)
 
 ---@alias ConsumeableNameStrict (CardTarotNameStrict|CardPlanetNameStrict|CardSpectralNameStrict)
 ---@alias ConsumeableName (ConsumeableNameStrict|string)
